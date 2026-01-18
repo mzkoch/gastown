@@ -1,5 +1,5 @@
 # Gastown E2E Testing Environment with Copilot CLI
-FROM golang:1.23-bookworm
+FROM golang:1.24-bookworm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
