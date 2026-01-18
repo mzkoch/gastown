@@ -2,8 +2,8 @@
 package config
 
 import (
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
