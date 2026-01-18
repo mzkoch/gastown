@@ -17,7 +17,7 @@ func isClaudeCmd(cmd string) bool {
 func TestBuiltinPresets(t *testing.T) {
 	t.Parallel()
 	// Ensure all built-in presets are accessible
-	presets := []AgentPreset{AgentClaude, AgentGemini, AgentCodex, AgentCursor, AgentAuggie, AgentAmp}
+	presets := []AgentPreset{AgentClaude, AgentGemini, AgentCodex, AgentCursor, AgentAuggie, AgentAmp, AgentCopilot}
 
 	for _, preset := range presets {
 		info := GetAgentPreset(preset)
@@ -50,6 +50,7 @@ func TestGetAgentPresetByName(t *testing.T) {
 		{"cursor", AgentCursor, false},
 		{"auggie", AgentAuggie, false},
 		{"amp", AgentAmp, false},
+		{"copilot", AgentCopilot, false},
 		{"aider", "", true},    // Not built-in, can be added via config
 		{"opencode", "", true}, // Not built-in, can be added via config
 		{"unknown", "", true},
@@ -83,6 +84,7 @@ func TestRuntimeConfigFromPreset(t *testing.T) {
 		{AgentCursor, "cursor-agent"},
 		{AgentAuggie, "auggie"},
 		{AgentAmp, "amp"},
+		{AgentCopilot, "copilot"},
 	}
 
 	for _, tt := range tests {
@@ -327,6 +329,7 @@ func TestSupportsSessionResume(t *testing.T) {
 		{"cursor", true},
 		{"auggie", true},
 		{"amp", true},
+		{"copilot", true},
 		{"unknown", false},
 	}
 
@@ -351,6 +354,7 @@ func TestGetSessionIDEnvVar(t *testing.T) {
 		{"cursor", ""},   // Cursor uses --resume with chatId directly
 		{"auggie", ""},   // Auggie uses --resume directly
 		{"amp", ""},      // AMP uses 'threads continue' subcommand
+		{"copilot", "COPILOT_SESSION_ID"},
 		{"unknown", ""},
 	}
 
@@ -375,6 +379,7 @@ func TestGetProcessNames(t *testing.T) {
 		{"cursor", []string{"cursor-agent"}},
 		{"auggie", []string{"auggie"}},
 		{"amp", []string{"amp"}},
+		{"copilot", []string{"copilot"}},
 		{"unknown", []string{"node"}}, // Falls back to Claude's process
 	}
 
@@ -534,6 +539,52 @@ func TestCursorAgentPreset(t *testing.T) {
 	}
 	if info.ResumeStyle != "flag" {
 		t.Errorf("cursor ResumeStyle = %q, want flag", info.ResumeStyle)
+	}
+}
+
+func TestCopilotAgentPreset(t *testing.T) {
+	t.Parallel()
+	// Verify copilot agent preset is correctly configured
+	info := GetAgentPreset(AgentCopilot)
+	if info == nil {
+		t.Fatal("copilot preset not found")
+	}
+
+	// Check command
+	if info.Command != "copilot" {
+		t.Errorf("copilot command = %q, want copilot", info.Command)
+	}
+
+	// Check YOLO flag
+	hasYolo := false
+	for _, arg := range info.Args {
+		if arg == "--yolo" {
+			hasYolo = true
+		}
+	}
+	if !hasYolo {
+		t.Error("copilot args missing --yolo")
+	}
+
+	// Check ProcessNames for detection
+	if len(info.ProcessNames) == 0 {
+		t.Error("copilot ProcessNames is empty")
+	}
+	if info.ProcessNames[0] != "copilot" {
+		t.Errorf("copilot ProcessNames[0] = %q, want copilot", info.ProcessNames[0])
+	}
+
+	// Check resume support
+	if info.ResumeFlag != "--resume" {
+		t.Errorf("copilot ResumeFlag = %q, want --resume", info.ResumeFlag)
+	}
+	if info.ResumeStyle != "flag" {
+		t.Errorf("copilot ResumeStyle = %q, want flag", info.ResumeStyle)
+	}
+
+	// Check session ID env var
+	if info.SessionIDEnv != "COPILOT_SESSION_ID" {
+		t.Errorf("copilot SessionIDEnv = %q, want COPILOT_SESSION_ID", info.SessionIDEnv)
 	}
 }
 
