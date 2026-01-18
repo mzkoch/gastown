@@ -26,45 +26,6 @@ func debugSession(context string, err error) {
 	}
 }
 
-func defaultAgentOverride(command string) string {
-	if command == "" {
-		return ""
-	}
-	trimmed := strings.TrimSpace(command)
-	for strings.HasPrefix(trimmed, "export ") {
-		idx := strings.Index(trimmed, "&&")
-		if idx == -1 {
-			break
-		}
-		trimmed = strings.TrimSpace(trimmed[idx+2:])
-	}
-	fields := strings.Fields(trimmed)
-	if len(fields) == 0 {
-		return ""
-	}
-	if fields[0] == "exec" {
-		fields = fields[1:]
-	}
-	if len(fields) > 0 && fields[0] == "env" {
-		fields = fields[1:]
-		for len(fields) > 0 {
-			if fields[0] == "--" {
-				fields = fields[1:]
-				break
-			}
-			if strings.HasPrefix(fields[0], "-") || strings.Contains(fields[0], "=") {
-				fields = fields[1:]
-				continue
-			}
-			break
-		}
-	}
-	if len(fields) == 0 {
-		return ""
-	}
-	return filepath.Base(fields[0])
-}
-
 // Session errors
 var (
 	ErrSessionRunning  = errors.New("session already running")
@@ -103,9 +64,6 @@ type SessionStartOptions struct {
 	// RuntimeConfigDir is resolved config directory for the runtime account.
 	// If set, this is injected as an environment variable.
 	RuntimeConfigDir string
-
-	// AgentOverride specifies an alternate agent alias.
-	AgentOverride string
 }
 
 // SessionInfo contains information about a running polecat session.
@@ -204,9 +162,6 @@ func (m *SessionManager) Start(polecat string, opts SessionStartOptions) error {
 	if workDir == "" {
 		workDir = m.clonePath(polecat)
 	}
-	if opts.AgentOverride == "" {
-		opts.AgentOverride = defaultAgentOverride(opts.Command)
-	}
 
 	// Validate issue exists and isn't tombstoned BEFORE creating session.
 	// This prevents CPU spin loops from agents retrying work on invalid issues.
@@ -232,22 +187,9 @@ func (m *SessionManager) Start(polecat string, opts SessionStartOptions) error {
 	if command == "" {
 		command = config.BuildPolecatStartupCommand(m.rig.Name, polecat, m.rig.Path, "")
 	}
-	if opts.AgentOverride == "" {
-		opts.AgentOverride = defaultAgentOverride(command)
-	}
 	// Prepend runtime config dir env if needed
 	if runtimeConfig.Session != nil && runtimeConfig.Session.ConfigDirEnv != "" && opts.RuntimeConfigDir != "" {
 		command = config.PrependEnv(command, map[string]string{runtimeConfig.Session.ConfigDirEnv: opts.RuntimeConfigDir})
-	}
-
-	if err := config.EnsureCopilotTrustedFolder(config.CopilotTrustConfig{
-		Role:          "polecat",
-		TownRoot:      townRoot,
-		RigPath:       m.rig.Path,
-		WorkDir:       workDir,
-		AgentOverride: opts.AgentOverride,
-	}); err != nil {
-		return err
 	}
 
 	// Create session with command directly to avoid send-keys race condition.
@@ -258,17 +200,12 @@ func (m *SessionManager) Start(polecat string, opts SessionStartOptions) error {
 
 	// Set environment (non-fatal: session works without these)
 	// Use centralized AgentEnv for consistency across all role startup paths
-	sessionIDEnv := ""
-	if runtimeConfig != nil && runtimeConfig.Session != nil {
-		sessionIDEnv = runtimeConfig.Session.SessionIDEnv
-	}
 	envVars := config.AgentEnv(config.AgentEnvConfig{
 		Role:             "polecat",
 		Rig:              m.rig.Name,
 		AgentName:        polecat,
 		TownRoot:         townRoot,
 		RuntimeConfigDir: opts.RuntimeConfigDir,
-		SessionIDEnv:     sessionIDEnv,
 		BeadsNoDaemon:    true,
 	})
 	for k, v := range envVars {
@@ -303,7 +240,6 @@ func (m *SessionManager) Start(polecat string, opts SessionStartOptions) error {
 
 	// Inject startup nudge for predecessor discovery via /resume
 	address := fmt.Sprintf("%s/polecats/%s", m.rig.Name, polecat)
-	runtime.WaitForCopilotReady(m.tmux, sessionID, runtimeConfig, constants.ClaudeStartTimeout)
 	debugSession("StartupNudge", session.StartupNudge(m.tmux, sessionID, session.StartupNudgeConfig{
 		Recipient: address,
 		Sender:    "witness",
