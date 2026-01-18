@@ -69,6 +69,11 @@ type AgentPresetInfo struct {
 	// Claude-only feature for seance command.
 	SupportsForkSession bool `json:"supports_fork_session,omitempty"`
 
+	// PromptMode controls how prompts are passed to the runtime.
+	// "arg" - append prompt as positional argument (default for claude)
+	// "none" - don't pass prompt on command line (for copilot, which uses -p flag)
+	PromptMode string `json:"prompt_mode,omitempty"`
+
 	// NonInteractive contains settings for non-interactive mode.
 	NonInteractive *NonInteractiveConfig `json:"non_interactive,omitempty"`
 }
@@ -189,6 +194,7 @@ var builtinPresets = map[AgentPreset]*AgentPresetInfo{
 		ResumeStyle:         "flag",
 		SupportsHooks:       false, // Copilot uses AGENTS.md instead of hooks
 		SupportsForkSession: false,
+		PromptMode:          "none", // Copilot rejects positional prompt args
 		NonInteractive: &NonInteractiveConfig{
 			PromptFlag: "-p",
 		},
@@ -344,8 +350,9 @@ func RuntimeConfigFromPreset(preset AgentPreset) *RuntimeConfig {
 	}
 
 	rc := &RuntimeConfig{
-		Command: info.Command,
-		Args:    append([]string(nil), info.Args...), // Copy to avoid mutation
+		Command:    info.Command,
+		Args:       append([]string(nil), info.Args...), // Copy to avoid mutation
+		PromptMode: info.PromptMode,
 	}
 
 	// Resolve command path for claude preset (handles alias installations)
