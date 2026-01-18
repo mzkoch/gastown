@@ -227,20 +227,6 @@ var builtinPresets = map[AgentPreset]*AgentPresetInfo{
 			OutputFlag: "--format json",
 		},
 	},
-	AgentCopilot: {
-		Name:                AgentCopilot,
-		Command:             "copilot",
-		Args:                []string{"--yolo"},
-		ProcessNames:        []string{"copilot"},
-		SessionIDEnv:        "COPILOT_SESSION_ID",
-		ResumeFlag:          "--resume",
-		ResumeStyle:         "flag",
-		SupportsHooks:       false, // Copilot uses AGENTS.md instead of hooks
-		SupportsForkSession: false,
-		NonInteractive: &NonInteractiveConfig{
-			PromptFlag: "-p",
-		},
-	},
 }
 
 // Registry state with proper synchronization.
