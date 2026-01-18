@@ -391,25 +391,31 @@ func buildRestartCommand(sessionName string) (string, error) {
 	// 3. export Claude-related env vars (not inherited by fresh shell)
 	// 4. run claude with the startup beacon (triggers immediate context loading)
 	// Use exec to ensure clean process replacement.
-	//
 	// Check if current session is using a non-default agent (GT_AGENT env var).
-	// If so, preserve it across handoff by using the override variant.
+	// If so, preserve it across handoff by resolving with the override.
 	currentAgent := os.Getenv("GT_AGENT")
-	var runtimeCmd string
+
+	var rigPath string
+	if identity.Rig != "" {
+		rigPath = filepath.Join(townRoot, identity.Rig)
+	}
+
+	var runtimeConfig *config.RuntimeConfig
 	if currentAgent != "" {
 		var err error
-		runtimeCmd, err = config.GetRuntimeCommandWithPromptAndAgentOverride("", beacon, currentAgent)
+		runtimeConfig, _, err = config.ResolveAgentConfigWithOverride(townRoot, rigPath, currentAgent)
 		if err != nil {
 			return "", fmt.Errorf("resolving agent config: %w", err)
 		}
 	} else {
-		runtimeCmd = config.GetRuntimeCommandWithPrompt("", beacon)
+		runtimeConfig = config.ResolveRoleAgentConfig(string(identity.Role), townRoot, rigPath)
 	}
+
+	runtimeCmd := runtimeConfig.BuildCommandWithPrompt(beacon)
 
 	// Build environment exports - role vars first, then Claude vars
 	var exports []string
 	if gtRole != "" {
-		runtimeConfig := config.LoadRuntimeConfig("")
 		exports = append(exports, "GT_ROLE="+gtRole)
 		exports = append(exports, "BD_ACTOR="+gtRole)
 		exports = append(exports, "GIT_AUTHOR_NAME="+gtRole)
