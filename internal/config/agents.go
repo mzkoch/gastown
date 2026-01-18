@@ -27,8 +27,6 @@ const (
 	AgentAuggie AgentPreset = "auggie"
 	// AgentAmp is Sourcegraph AMP.
 	AgentAmp AgentPreset = "amp"
-	// AgentOpenCode is OpenCode multi-model CLI.
-	AgentOpenCode AgentPreset = "opencode"
 	// AgentCopilot is GitHub Copilot CLI.
 	AgentCopilot AgentPreset = "copilot"
 )
@@ -44,11 +42,6 @@ type AgentPresetInfo struct {
 
 	// Args are the default command-line arguments for autonomous mode.
 	Args []string `json:"args"`
-
-	// Env are environment variables to set when starting the agent.
-	// These are merged with the standard GT_* variables.
-	// Used for agent-specific configuration like OPENCODE_PERMISSION.
-	Env map[string]string `json:"env,omitempty"`
 
 	// ProcessNames are the process names to look for when detecting if the agent is running.
 	// Used by tmux.IsAgentRunning to check pane_current_command.
@@ -75,11 +68,6 @@ type AgentPresetInfo struct {
 	// SupportsForkSession indicates if --fork-session is available.
 	// Claude-only feature for seance command.
 	SupportsForkSession bool `json:"supports_fork_session,omitempty"`
-
-	// PromptMode controls how prompts are passed to the runtime.
-	// "arg" - append prompt as positional argument (default for claude)
-	// "none" - don't pass prompt on command line (for copilot, which uses -p flag)
-	PromptMode string `json:"prompt_mode,omitempty"`
 
 	// NonInteractive contains settings for non-interactive mode.
 	NonInteractive *NonInteractiveConfig `json:"non_interactive,omitempty"`
@@ -144,7 +132,7 @@ var builtinPresets = map[AgentPreset]*AgentPresetInfo{
 		Command:             "codex",
 		Args:                []string{"--yolo"},
 		ProcessNames:        []string{"codex"}, // Codex CLI binary
-		SessionIDEnv:        "",                // Codex captures from JSONL output
+		SessionIDEnv:        "", // Codex captures from JSONL output
 		ResumeFlag:          "resume",
 		ResumeStyle:         "subcommand",
 		SupportsHooks:       false, // Use env/files instead
@@ -191,25 +179,6 @@ var builtinPresets = map[AgentPreset]*AgentPresetInfo{
 		SupportsHooks:       false,
 		SupportsForkSession: false,
 	},
-	AgentOpenCode: {
-		Name:    AgentOpenCode,
-		Command: "opencode",
-		Args:    []string{}, // No CLI flags needed, YOLO via OPENCODE_PERMISSION env
-		Env: map[string]string{
-			// Auto-approve all tool calls (equivalent to --dangerously-skip-permissions)
-			"OPENCODE_PERMISSION": `{"*":"allow"}`,
-		},
-		ProcessNames:        []string{"opencode", "node"}, // Runs as Node.js
-		SessionIDEnv:        "",                           // OpenCode manages sessions internally
-		ResumeFlag:          "",                           // No resume support yet
-		ResumeStyle:         "",
-		SupportsHooks:       true,  // Uses .opencode/plugin/gastown.js
-		SupportsForkSession: false,
-		NonInteractive: &NonInteractiveConfig{
-			Subcommand: "run",
-			OutputFlag: "--format json",
-		},
-	},
 	AgentCopilot: {
 		Name:                AgentCopilot,
 		Command:             "copilot",
@@ -218,9 +187,8 @@ var builtinPresets = map[AgentPreset]*AgentPresetInfo{
 		SessionIDEnv:        "COPILOT_SESSION_ID",
 		ResumeFlag:          "--resume",
 		ResumeStyle:         "flag",
-		SupportsHooks:       true, // Copilot CLI supports hooks per docs
+		SupportsHooks:       false, // Copilot uses AGENTS.md instead of hooks
 		SupportsForkSession: false,
-		PromptMode:          "none", // Copilot rejects positional prompt args
 		NonInteractive: &NonInteractiveConfig{
 			PromptFlag: "-p",
 		},
@@ -366,7 +334,7 @@ func DefaultAgentPreset() AgentPreset {
 }
 
 // RuntimeConfigFromPreset creates a RuntimeConfig from an agent preset.
-// This provides the basic Command/Args/Env; additional fields from AgentPresetInfo
+// This provides the basic Command/Args; additional fields from AgentPresetInfo
 // can be accessed separately for extended functionality.
 func RuntimeConfigFromPreset(preset AgentPreset) *RuntimeConfig {
 	info := GetAgentPreset(preset)
@@ -375,21 +343,9 @@ func RuntimeConfigFromPreset(preset AgentPreset) *RuntimeConfig {
 		return DefaultRuntimeConfig()
 	}
 
-	// Copy Env map to avoid mutation
-	var envCopy map[string]string
-	if len(info.Env) > 0 {
-		envCopy = make(map[string]string, len(info.Env))
-		for k, v := range info.Env {
-			envCopy[k] = v
-		}
-	}
-
 	rc := &RuntimeConfig{
-		Provider:   string(info.Name),
-		Command:    info.Command,
-		Args:       append([]string(nil), info.Args...), // Copy to avoid mutation
-		Env:        envCopy,
-		PromptMode: info.PromptMode,
+		Command: info.Command,
+		Args:    append([]string(nil), info.Args...), // Copy to avoid mutation
 	}
 
 	// Resolve command path for claude preset (handles alias installations)

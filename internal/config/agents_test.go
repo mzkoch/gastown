@@ -51,8 +51,8 @@ func TestGetAgentPresetByName(t *testing.T) {
 		{"auggie", AgentAuggie, false},
 		{"amp", AgentAmp, false},
 		{"copilot", AgentCopilot, false},
-		{"aider", "", true},               // Not built-in, can be added via config
-		{"opencode", AgentOpenCode, false}, // Built-in multi-model CLI agent
+		{"aider", "", true},    // Not built-in, can be added via config
+		{"opencode", "", true}, // Not built-in, can be added via config
 		{"unknown", "", true},
 	}
 
@@ -90,10 +90,6 @@ func TestRuntimeConfigFromPreset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(string(tt.preset), func(t *testing.T) {
 			rc := RuntimeConfigFromPreset(tt.preset)
-			if rc.Provider != string(tt.preset) {
-				t.Errorf("RuntimeConfigFromPreset(%s).Provider = %v, want %v",
-					tt.preset, rc.Provider, tt.preset)
-			}
 			// For claude, command may be full path due to resolveClaudePath
 			if tt.preset == AgentClaude {
 				if !isClaudeCmd(rc.Command) {
@@ -105,21 +101,6 @@ func TestRuntimeConfigFromPreset(t *testing.T) {
 					tt.preset, rc.Command, tt.wantCommand)
 			}
 		})
-	}
-}
-
-func TestRuntimeConfigFromPresetReturnsNilEnvForPresetsWithoutEnv(t *testing.T) {
-	t.Parallel()
-	// Built-in presets like Claude don't have Env set
-	// This verifies nil Env handling in RuntimeConfigFromPreset
-	rc := RuntimeConfigFromPreset(AgentClaude)
-	if rc == nil {
-		t.Fatal("RuntimeConfigFromPreset returned nil")
-	}
-
-	// Claude preset doesn't have Env, so it should be nil
-	if rc.Env != nil && len(rc.Env) > 0 {
-		t.Errorf("Expected nil/empty Env for Claude preset, got %v", rc.Env)
 	}
 }
 
@@ -136,7 +117,7 @@ func TestIsKnownPreset(t *testing.T) {
 		{"auggie", true},
 		{"amp", true},
 		{"aider", false},    // Not built-in, can be added via config
-		{"opencode", true},  // Built-in multi-model CLI agent
+		{"opencode", false}, // Not built-in, can be added via config
 		{"unknown", false},
 		{"chatgpt", false},
 	}
@@ -607,26 +588,6 @@ func TestCopilotAgentPreset(t *testing.T) {
 	}
 }
 
-func TestCopilotRuntimeTmuxDefaults(t *testing.T) {
-	t.Parallel()
-
-	rc := normalizeRuntimeConfig(RuntimeConfigFromPreset(AgentCopilot))
-	if rc == nil {
-		t.Fatal("normalizeRuntimeConfig returned nil")
-	}
-
-	if rc.Tmux == nil {
-		t.Fatal("RuntimeConfigFromPreset Tmux config is nil")
-	}
-
-	if rc.Tmux.ReadyPromptPrefix != "❯" {
-		t.Errorf("copilot ReadyPromptPrefix = %q, want %q", rc.Tmux.ReadyPromptPrefix, "❯")
-	}
-	if rc.Tmux.ReadyDelayMs != 3000 {
-		t.Errorf("copilot ReadyDelayMs = %d, want %d", rc.Tmux.ReadyDelayMs, 3000)
-	}
-}
-
 // TestDefaultRigAgentRegistryPath verifies that the default rig agent registry path is constructed correctly.
 func TestDefaultRigAgentRegistryPath(t *testing.T) {
 	t.Parallel()
@@ -735,120 +696,4 @@ func TestLoadRigAgentRegistry(t *testing.T) {
 			t.Errorf("LoadRigAgentRegistry(%s) should error for invalid JSON: got nil", invalidRegistryPath)
 		}
 	})
-}
-
-func TestOpenCodeAgentPreset(t *testing.T) {
-	t.Parallel()
-	// Verify OpenCode agent preset is correctly configured
-	info := GetAgentPreset(AgentOpenCode)
-	if info == nil {
-		t.Fatal("opencode preset not found")
-	}
-
-	// Check command
-	if info.Command != "opencode" {
-		t.Errorf("opencode command = %q, want opencode", info.Command)
-	}
-
-	// Check Args (should be empty - YOLO via Env)
-	if len(info.Args) != 0 {
-		t.Errorf("opencode args = %v, want empty (uses Env for YOLO)", info.Args)
-	}
-
-	// Check Env for OPENCODE_PERMISSION
-	if info.Env == nil {
-		t.Fatal("opencode Env is nil")
-	}
-	permission, ok := info.Env["OPENCODE_PERMISSION"]
-	if !ok {
-		t.Error("opencode Env missing OPENCODE_PERMISSION")
-	}
-	if permission != `{"*":"allow"}` {
-		t.Errorf("OPENCODE_PERMISSION = %q, want {\"*\":\"allow\"}", permission)
-	}
-
-	// Check ProcessNames for detection
-	if len(info.ProcessNames) != 2 {
-		t.Errorf("opencode ProcessNames length = %d, want 2", len(info.ProcessNames))
-	}
-	if info.ProcessNames[0] != "opencode" {
-		t.Errorf("opencode ProcessNames[0] = %q, want opencode", info.ProcessNames[0])
-	}
-	if info.ProcessNames[1] != "node" {
-		t.Errorf("opencode ProcessNames[1] = %q, want node", info.ProcessNames[1])
-	}
-
-	// Check hooks support
-	if !info.SupportsHooks {
-		t.Error("opencode should support hooks")
-	}
-
-	// Check fork session (not supported)
-	if info.SupportsForkSession {
-		t.Error("opencode should not support fork session")
-	}
-
-	// Check NonInteractive config
-	if info.NonInteractive == nil {
-		t.Fatal("opencode NonInteractive is nil")
-	}
-	if info.NonInteractive.Subcommand != "run" {
-		t.Errorf("opencode NonInteractive.Subcommand = %q, want run", info.NonInteractive.Subcommand)
-	}
-	if info.NonInteractive.OutputFlag != "--format json" {
-		t.Errorf("opencode NonInteractive.OutputFlag = %q, want --format json", info.NonInteractive.OutputFlag)
-	}
-}
-
-func TestOpenCodeProviderDefaults(t *testing.T) {
-	t.Parallel()
-
-	// Test defaultReadyDelayMs for opencode
-	delay := defaultReadyDelayMs("opencode")
-	if delay != 8000 {
-		t.Errorf("defaultReadyDelayMs(opencode) = %d, want 8000", delay)
-	}
-
-	// Test defaultProcessNames for opencode
-	names := defaultProcessNames("opencode", "opencode")
-	if len(names) != 2 {
-		t.Errorf("defaultProcessNames(opencode) length = %d, want 2", len(names))
-	}
-	if names[0] != "opencode" || names[1] != "node" {
-		t.Errorf("defaultProcessNames(opencode) = %v, want [opencode, node]", names)
-	}
-
-	// Test defaultInstructionsFile for opencode
-	instFile := defaultInstructionsFile("opencode")
-	if instFile != "AGENTS.md" {
-		t.Errorf("defaultInstructionsFile(opencode) = %q, want AGENTS.md", instFile)
-	}
-}
-
-func TestOpenCodeRuntimeConfigFromPreset(t *testing.T) {
-	t.Parallel()
-	rc := RuntimeConfigFromPreset(AgentOpenCode)
-	if rc == nil {
-		t.Fatal("RuntimeConfigFromPreset(opencode) returned nil")
-	}
-
-	// Check command
-	if rc.Command != "opencode" {
-		t.Errorf("RuntimeConfig.Command = %q, want opencode", rc.Command)
-	}
-
-	// Check Env is copied
-	if rc.Env == nil {
-		t.Fatal("RuntimeConfig.Env is nil")
-	}
-	if rc.Env["OPENCODE_PERMISSION"] != `{"*":"allow"}` {
-		t.Errorf("RuntimeConfig.Env[OPENCODE_PERMISSION] = %q, want {\"*\":\"allow\"}", rc.Env["OPENCODE_PERMISSION"])
-	}
-
-	// Verify Env is a copy (mutation doesn't affect original)
-	rc.Env["MUTATED"] = "yes"
-	original := GetAgentPreset(AgentOpenCode)
-	if _, exists := original.Env["MUTATED"]; exists {
-		t.Error("Mutation of RuntimeConfig.Env affected original preset")
-	}
 }
