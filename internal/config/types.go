@@ -591,6 +591,9 @@ func defaultReadyPromptPrefix(provider string) string {
 		// Claude Code uses ❯ (U+276F) as the prompt character
 		return "❯ "
 	}
+	if provider == "copilot" {
+		return "❯" // Copilot CLI uses this Unicode prompt character
+	}
 	return ""
 }
 
@@ -598,7 +601,7 @@ func defaultReadyDelayMs(provider string) int {
 	if provider == "claude" {
 		return 10000
 	}
-	if provider == "codex" {
+	if provider == "codex" || provider == "copilot" {
 		return 3000
 	}
 	return 0
