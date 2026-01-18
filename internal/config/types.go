@@ -548,6 +548,8 @@ func defaultHooksProvider(provider string) string {
 		return "claude"
 	case "opencode":
 		return "opencode"
+	case "copilot":
+		return "copilot"
 	default:
 		return "none"
 	}
@@ -559,6 +561,8 @@ func defaultHooksDir(provider string) string {
 		return ".claude"
 	case "opencode":
 		return ".opencode/plugin"
+	case "copilot":
+		return ".copilot"
 	default:
 		return ""
 	}
@@ -570,6 +574,8 @@ func defaultHooksFile(provider string) string {
 		return "settings.json"
 	case "opencode":
 		return "gastown.js"
+	case "copilot":
+		return "hooks.json"
 	default:
 		return ""
 	}
