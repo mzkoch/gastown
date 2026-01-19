@@ -213,7 +213,7 @@ test_full_config_suite() {
 test_gt_up_startup_messages() {
     log_info "Testing gt up startup messages..."
 
-    local test_root="$HOME/gt-e2e"
+    local test_root="/home/testuser/gt-e2e"
     local town_root="$test_root/town"
     local rig_repo="$test_root/rig-repo"
 
