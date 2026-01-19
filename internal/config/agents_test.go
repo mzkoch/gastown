@@ -607,7 +607,6 @@ func TestCopilotAgentPreset(t *testing.T) {
 	}
 }
 
-<<<<<<< HEAD
 func TestCopilotRuntimeTmuxDefaults(t *testing.T) {
 	t.Parallel()
 
@@ -627,9 +626,6 @@ func TestCopilotRuntimeTmuxDefaults(t *testing.T) {
 		t.Errorf("copilot ReadyDelayMs = %d, want %d", rc.Tmux.ReadyDelayMs, 3000)
 	}
 }
-
-=======
->>>>>>> a88a1b88 (feat: add Copilot CLI as built-in runtime agent)
 // TestDefaultRigAgentRegistryPath verifies that the default rig agent registry path is constructed correctly.
 func TestDefaultRigAgentRegistryPath(t *testing.T) {
 	t.Parallel()
