@@ -903,6 +903,32 @@ func TestAttachmentFieldsRoundTrip(t *testing.T) {
 	}
 }
 
+// TestSetAttachmentFieldsAllowsHookedBeads ensures attachment fields are recorded
+// regardless of bead status (hooked or pinned), since hook status may be hooked.
+func TestSetAttachmentFieldsAllowsHookedBeads(t *testing.T) {
+	issue := &Issue{
+		ID:          "gt-abc123",
+		Status:      "hooked",
+		Description: "Existing text.",
+	}
+
+	fields := &AttachmentFields{
+		AttachedMolecule: "mol-polecat-work",
+		AttachedAt:       "2026-01-19T14:26:19Z",
+	}
+
+	got := SetAttachmentFields(issue, fields)
+	if !strings.HasPrefix(got, "attached_molecule: mol-polecat-work") {
+		t.Errorf("SetAttachmentFields() missing attached_molecule prefix:\n%s", got)
+	}
+	if !strings.Contains(got, "attached_at: 2026-01-19T14:26:19Z") {
+		t.Errorf("SetAttachmentFields() missing attached_at:\n%s", got)
+	}
+	if !strings.Contains(got, "Existing text.") {
+		t.Errorf("SetAttachmentFields() should preserve existing text:\n%s", got)
+	}
+}
+
 // TestResolveBeadsDir tests the redirect following logic.
 func TestResolveBeadsDir(t *testing.T) {
 	// Create temp directory structure
