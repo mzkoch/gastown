@@ -31,10 +31,12 @@ func defaultAgentOverride(command string) string {
 		return ""
 	}
 	trimmed := strings.TrimSpace(command)
-	if strings.HasPrefix(trimmed, "export ") {
-		if idx := strings.Index(trimmed, "&&"); idx != -1 {
-			trimmed = strings.TrimSpace(trimmed[idx+2:])
+	for strings.HasPrefix(trimmed, "export ") {
+		idx := strings.Index(trimmed, "&&")
+		if idx == -1 {
+			break
 		}
+		trimmed = strings.TrimSpace(trimmed[idx+2:])
 	}
 	fields := strings.Fields(trimmed)
 	if len(fields) == 0 {
