@@ -90,6 +90,10 @@ func TestRuntimeConfigFromPreset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(string(tt.preset), func(t *testing.T) {
 			rc := RuntimeConfigFromPreset(tt.preset)
+			if rc.Provider != string(tt.preset) {
+				t.Errorf("RuntimeConfigFromPreset(%s).Provider = %v, want %v",
+					tt.preset, rc.Provider, tt.preset)
+			}
 			// For claude, command may be full path due to resolveClaudePath
 			if tt.preset == AgentClaude {
 				if !isClaudeCmd(rc.Command) {
@@ -600,6 +604,26 @@ func TestCopilotAgentPreset(t *testing.T) {
 	// Check session ID env var
 	if info.SessionIDEnv != "COPILOT_SESSION_ID" {
 		t.Errorf("copilot SessionIDEnv = %q, want COPILOT_SESSION_ID", info.SessionIDEnv)
+	}
+}
+
+func TestCopilotRuntimeTmuxDefaults(t *testing.T) {
+	t.Parallel()
+
+	rc := normalizeRuntimeConfig(RuntimeConfigFromPreset(AgentCopilot))
+	if rc == nil {
+		t.Fatal("normalizeRuntimeConfig returned nil")
+	}
+
+	if rc.Tmux == nil {
+		t.Fatal("RuntimeConfigFromPreset Tmux config is nil")
+	}
+
+	if rc.Tmux.ReadyPromptPrefix != "❯" {
+		t.Errorf("copilot ReadyPromptPrefix = %q, want %q", rc.Tmux.ReadyPromptPrefix, "❯")
+	}
+	if rc.Tmux.ReadyDelayMs != 3000 {
+		t.Errorf("copilot ReadyDelayMs = %d, want %d", rc.Tmux.ReadyDelayMs, 3000)
 	}
 }
 

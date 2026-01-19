@@ -385,6 +385,7 @@ func RuntimeConfigFromPreset(preset AgentPreset) *RuntimeConfig {
 	}
 
 	rc := &RuntimeConfig{
+		Provider:   string(info.Name),
 		Command:    info.Command,
 		Args:       append([]string(nil), info.Args...), // Copy to avoid mutation
 		Env:        envCopy,
