@@ -59,27 +59,27 @@ Example:
 }
 
 var moleculeAttachCmd = &cobra.Command{
-	Use:   "attach [pinned-bead-id] <molecule-id>",
-	Short: "Attach a molecule to a pinned bead",
-	Long: `Attach a molecule to a pinned/handoff bead.
+	Use:   "attach [hook-bead-id] <molecule-id>",
+	Short: "Attach a molecule to a hooked bead",
+	Long: `Attach a molecule to a hooked/pinned bead.
 
 This records which molecule an agent is currently working on. The attachment
 is stored in the pinned bead's description and visible via 'bd show'.
 
 When called with a single argument from an agent working directory, the
-pinned bead ID is auto-detected from the current agent's hook.
+hook bead ID is auto-detected from the current agent's hook.
 
 Examples:
-  gt molecule attach gt-abc mol-xyz  # Explicit pinned bead
+  gt molecule attach gt-abc mol-xyz  # Explicit hook bead
   gt molecule attach mol-xyz         # Auto-detect from cwd`,
 	Args: cobra.RangeArgs(1, 2),
 	RunE: runMoleculeAttach,
 }
 
 var moleculeDetachCmd = &cobra.Command{
-	Use:   "detach <pinned-bead-id>",
-	Short: "Detach molecule from a pinned bead",
-	Long: `Remove molecule attachment from a pinned/handoff bead.
+	Use:   "detach <hook-bead-id>",
+	Short: "Detach molecule from a hooked bead",
+	Long: `Remove molecule attachment from a hooked/pinned bead.
 
 This clears the attached_molecule and attached_at fields from the bead.
 
@@ -90,9 +90,9 @@ Example:
 }
 
 var moleculeAttachmentCmd = &cobra.Command{
-	Use:   "attachment <pinned-bead-id>",
-	Short: "Show attachment status of a pinned bead",
-	Long: `Show which molecule is attached to a pinned bead.
+	Use:   "attachment <hook-bead-id>",
+	Short: "Show attachment status of a hooked bead",
+	Long: `Show which molecule is attached to a hooked/pinned bead.
 
 Example:
   gt molecule attachment gt-abc`,

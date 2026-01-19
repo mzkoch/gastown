@@ -167,8 +167,8 @@ bd mol burn <id>             # Discard wisp (explicit ID)
 gt hook                    # What's on MY hook
 gt mol current               # What should I work on next
 gt mol progress <id>         # Execution progress of molecule
-gt mol attach <bead> <mol>   # Pin molecule to bead
-gt mol detach <bead>         # Unpin molecule from bead
+gt mol attach <bead> <mol>   # Attach molecule to hooked/pinned bead
+gt mol detach <bead>         # Detach molecule from bead
 gt mol attach-from-mail <id> # Attach from mail message
 
 # Agent lifecycle (operates on agent's attached molecule)

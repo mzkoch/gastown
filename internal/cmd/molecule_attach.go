@@ -15,7 +15,7 @@ func runMoleculeAttach(cmd *cobra.Command, args []string) error {
 	var pinnedBeadID, moleculeID string
 
 	if len(args) == 2 {
-		// Explicit: gt mol attach <pinned-bead-id> <molecule-id>
+		// Explicit: gt mol attach <hook-bead-id> <molecule-id>
 		pinnedBeadID = args[0]
 		moleculeID = args[1]
 	} else {
@@ -27,7 +27,7 @@ func runMoleculeAttach(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("auto-detecting agent: %w", err)
 		}
 		if pinnedBeadID == "" {
-			return fmt.Errorf("could not detect agent from current directory - provide explicit pinned bead ID")
+			return fmt.Errorf("could not detect agent from current directory - provide explicit hook bead ID")
 		}
 	}
 
