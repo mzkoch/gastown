@@ -148,19 +148,23 @@ func (b *Beads) ClearMail(reason string) (*ClearMailResult, error) {
 	return result, nil
 }
 
-// AttachMolecule attaches a molecule to a pinned bead by updating its description.
+// AttachMolecule attaches a molecule to a pinned or hooked bead by updating its description.
 // The moleculeID is the root issue ID of the molecule to attach.
 // Returns the updated issue.
 func (b *Beads) AttachMolecule(pinnedBeadID, moleculeID string) (*Issue, error) {
-	// Fetch the pinned bead
+	// Fetch the bead to attach
 	issue, err := b.Show(pinnedBeadID)
 	if err != nil {
 		return nil, fmt.Errorf("fetching pinned bead: %w", err)
 	}
 
-	// Only allow pinned beads (permanent records like role definitions)
-	if issue.Status != StatusPinned {
-		return nil, fmt.Errorf("issue %s is not pinned (status: %s)", pinnedBeadID, issue.Status)
+	// Allow pinned beads, hooked beads, or open polecat agent beads (polecats have a lifecycle, not permanent).
+	if issue.Status != StatusPinned && issue.Status != StatusHooked {
+		_, role, _, ok := ParseAgentBeadID(pinnedBeadID)
+		if !(issue.Status == "open" && ok && role == "polecat") {
+			return nil, fmt.Errorf("issue %s is not pinned, hooked, or open polecat (status: %s)", pinnedBeadID, issue.Status)
+		}
+	}
 	}
 
 	// Build attachment fields with current timestamp
