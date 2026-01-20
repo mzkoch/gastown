@@ -19,6 +19,7 @@ import (
 type LiveConvoyFetcher struct {
 	townRoot  string
 	townBeads string
+	townRoot  string
 }
 
 // NewLiveConvoyFetcher creates a fetcher for the current workspace.
@@ -31,6 +32,7 @@ func NewLiveConvoyFetcher() (*LiveConvoyFetcher, error) {
 	return &LiveConvoyFetcher{
 		townRoot:  townRoot,
 		townBeads: filepath.Join(townRoot, ".beads"),
+		townRoot:  townRoot,
 	}, nil
 }
 
