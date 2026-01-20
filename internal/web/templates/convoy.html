@@ -380,7 +380,7 @@
         <table class="convoy-table">
             <thead>
                 <tr>
-                    <th>PR #</th>
+                    <th>MR ID</th>
                     <th>Repo</th>
                     <th>Title</th>
                     <th>CI Status</th>
@@ -391,7 +391,11 @@
                 {{range .MergeQueue}}
                 <tr class="{{.ColorClass}}">
                     <td>
-                        <a href="{{.URL}}" target="_blank" class="pr-link">#{{.Number}}</a>
+                        {{if .URL}}
+                        <a href="{{.URL}}" target="_blank" class="pr-link">{{.ID}}</a>
+                        {{else}}
+                        <span class="pr-link">{{.ID}}</span>
+                        {{end}}
                     </td>
                     <td>{{.Repo}}</td>
                     <td>
@@ -421,7 +425,7 @@
         </table>
         {{else}}
         <div class="empty-state-inline">
-            <p>No PRs in queue</p>
+            <p>No merge requests in queue</p>
         </div>
         {{end}}
 

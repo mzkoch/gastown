@@ -229,19 +229,17 @@ func TestConvoyHandler_MergeQueueRendering(t *testing.T) {
 		Convoys: []ConvoyRow{},
 		MergeQueue: []MergeQueueRow{
 			{
-				Number:     123,
+				ID:         "gt-mr-123",
 				Repo:       "roxas",
 				Title:      "Fix authentication bug",
-				URL:        "https://github.com/test/repo/pull/123",
 				CIStatus:   "pass",
 				Mergeable:  "ready",
 				ColorClass: "mq-green",
 			},
 			{
-				Number:     456,
+				ID:         "gt-mr-456",
 				Repo:       "gastown",
 				Title:      "Add dashboard feature",
-				URL:        "https://github.com/test/repo/pull/456",
 				CIStatus:   "pending",
 				Mergeable:  "pending",
 				ColorClass: "mq-yellow",
@@ -270,12 +268,12 @@ func TestConvoyHandler_MergeQueueRendering(t *testing.T) {
 		t.Error("Response should contain merge queue section header")
 	}
 
-	// Check PR numbers are rendered
-	if !strings.Contains(body, "#123") {
-		t.Error("Response should contain PR #123")
+	// Check MR IDs are rendered
+	if !strings.Contains(body, "gt-mr-123") {
+		t.Error("Response should contain MR gt-mr-123")
 	}
-	if !strings.Contains(body, "#456") {
-		t.Error("Response should contain PR #456")
+	if !strings.Contains(body, "gt-mr-456") {
+		t.Error("Response should contain MR gt-mr-456")
 	}
 
 	// Check repo names
@@ -285,10 +283,10 @@ func TestConvoyHandler_MergeQueueRendering(t *testing.T) {
 
 	// Check CI status badges
 	if !strings.Contains(body, "ci-pass") {
-		t.Error("Response should contain ci-pass class for passing PR")
+		t.Error("Response should contain ci-pass class for passing MR")
 	}
 	if !strings.Contains(body, "ci-pending") {
-		t.Error("Response should contain ci-pending class for pending PR")
+		t.Error("Response should contain ci-pending class for pending MR")
 	}
 }
 
@@ -311,7 +309,7 @@ func TestConvoyHandler_EmptyMergeQueue(t *testing.T) {
 	body := w.Body.String()
 
 	// Should show empty state for merge queue
-	if !strings.Contains(body, "No PRs in queue") {
+	if !strings.Contains(body, "No merge requests in queue") {
 		t.Error("Response should show empty merge queue message")
 	}
 }
@@ -540,9 +538,9 @@ func TestConvoyHandler_FullDashboard(t *testing.T) {
 		},
 		MergeQueue: []MergeQueueRow{
 			{
-				Number:     789,
+				ID:         "gt-mr-789",
 				Repo:       "testrig",
-				Title:      "Test PR",
+				Title:      "Test MR",
 				CIStatus:   "pass",
 				Mergeable:  "ready",
 				ColorClass: "mq-green",
@@ -585,8 +583,8 @@ func TestConvoyHandler_FullDashboard(t *testing.T) {
 	if !strings.Contains(body, "Refinery Merge Queue") {
 		t.Error("Response should contain merge queue section")
 	}
-	if !strings.Contains(body, "#789") {
-		t.Error("Response should contain PR data")
+	if !strings.Contains(body, "gt-mr-789") {
+		t.Error("Response should contain MR data")
 	}
 	if !strings.Contains(body, "Polecat Workers") {
 		t.Error("Response should contain polecat section")
@@ -617,10 +615,9 @@ func TestE2E_Server_FullDashboard(t *testing.T) {
 		},
 		MergeQueue: []MergeQueueRow{
 			{
-				Number:     101,
+				ID:         "gt-mr-101",
 				Repo:       "roxas",
-				Title:      "E2E Test PR",
-				URL:        "https://github.com/test/roxas/pull/101",
+				Title:      "E2E Test MR",
 				CIStatus:   "pass",
 				Mergeable:  "ready",
 				ColorClass: "mq-green",
@@ -681,8 +678,8 @@ func TestE2E_Server_FullDashboard(t *testing.T) {
 		{"Convoy title", "E2E Test Convoy"},
 		{"Convoy progress", "2/4"},
 		{"Merge queue section", "Refinery Merge Queue"},
-		{"PR number", "#101"},
-		{"PR repo", "roxas"},
+		{"MR id", "gt-mr-101"},
+		{"MR repo", "roxas"},
 		{"Polecat section", "Polecat Workers"},
 		{"Polecat name", "furiosa"},
 		{"Polecat status", "Running E2E tests"},
@@ -777,12 +774,12 @@ func TestE2E_Server_MergeQueueEmpty(t *testing.T) {
 	}
 
 	// Empty state message
-	if !strings.Contains(body, "No PRs in queue") {
-		t.Error("Should show 'No PRs in queue' when empty")
+	if !strings.Contains(body, "No merge requests in queue") {
+		t.Error("Should show 'No merge requests in queue' when empty")
 	}
 }
 
-// TestE2E_Server_MergeQueueStatuses tests all PR status combinations.
+// TestE2E_Server_MergeQueueStatuses tests all MR status combinations.
 func TestE2E_Server_MergeQueueStatuses(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -803,10 +800,9 @@ func TestE2E_Server_MergeQueueStatuses(t *testing.T) {
 			mock := &MockConvoyFetcher{
 				MergeQueue: []MergeQueueRow{
 					{
-						Number:     42,
+						ID:         "gt-mr-42",
 						Repo:       "test",
-						Title:      "Test PR",
-						URL:        "https://github.com/test/test/pull/42",
+						Title:      "Test MR",
 						CIStatus:   tt.ciStatus,
 						Mergeable:  tt.mergeable,
 						ColorClass: tt.colorClass,
