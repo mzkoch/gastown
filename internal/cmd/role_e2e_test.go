@@ -10,12 +10,12 @@ import (
 	"testing"
 )
 
-// cleanGTEnv returns os.Environ() with all GT_* variables removed.
+// cleanGTEnv returns os.Environ() with all GT_*, BD_*, and BEADS_* variables removed.
 // This ensures tests don't inherit stale role environment from CI or previous tests.
 func cleanGTEnv() []string {
 	var clean []string
 	for _, env := range os.Environ() {
-		if !strings.HasPrefix(env, "GT_") {
+		if !strings.HasPrefix(env, "GT_") && !strings.HasPrefix(env, "BD_") && !strings.HasPrefix(env, "BEADS_") {
 			clean = append(clean, env)
 		}
 	}
@@ -1075,4 +1075,3 @@ func TestRoleHomeInvalidPaths(t *testing.T) {
 		})
 	}
 }
-
