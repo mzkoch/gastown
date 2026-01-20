@@ -77,6 +77,35 @@ func TestReadHeartbeat_NonExistent(t *testing.T) {
 	}
 }
 
+func TestReadHeartbeat_FallbackLastPatrol(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "deacon-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	lastPatrol := time.Now().Add(-2 * time.Minute).UTC()
+	data := []byte(`{"patrol_count":3,"last_patrol":"` + lastPatrol.Format(time.RFC3339Nano) + `","extraordinary_action":false}`)
+
+	if err := os.MkdirAll(filepath.Join(tmpDir, "deacon"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(HeartbeatFile(tmpDir), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	hb := ReadHeartbeat(tmpDir)
+	if hb == nil {
+		t.Fatal("expected heartbeat from fallback")
+	}
+	if hb.Timestamp.IsZero() {
+		t.Fatal("expected fallback timestamp to be set")
+	}
+	if diff := hb.Timestamp.Sub(lastPatrol); diff > time.Second || diff < -time.Second {
+		t.Fatalf("fallback timestamp mismatch: got %s want %s", hb.Timestamp, lastPatrol)
+	}
+}
+
 func TestHeartbeat_Age(t *testing.T) {
 	// Test nil heartbeat
 	var nilHb *Heartbeat
