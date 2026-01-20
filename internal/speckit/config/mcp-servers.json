@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "gastown": {
-      "command": "gt",
-      "args": ["mcp", "serve"]
-    }
-  }
-}
