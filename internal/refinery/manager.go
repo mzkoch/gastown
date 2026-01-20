@@ -96,26 +96,6 @@ func (m *Manager) Start(foreground bool, agentOverride string) error {
 
 	// Check if session already exists
 	running, _ := t.HasSession(sessionID)
-	if running {
-		// Session exists - check if Claude is actually running (healthy vs zombie)
-		// Use IsClaudeRunning for robust detection: Claude can report as "node", "claude",
-		// or version number like "2.0.76". IsAgentRunning with just "node" was too strict
-		// and caused healthy sessions to be killed. See: gastown#566
-		if t.IsClaudeRunning(sessionID) {
-			// Healthy - Claude is running
-			return ErrAlreadyRunning
-		}
-		// Zombie - tmux alive but Claude dead. Kill and recreate.
-		_, _ = fmt.Fprintln(m.output, "⚠ Detected zombie session (tmux alive, agent dead). Recreating...")
-		if err := t.KillSession(sessionID); err != nil {
-			return fmt.Errorf("killing zombie session: %w", err)
-		}
-	}
-
-	// Note: No PID check per ZFC - tmux session is the source of truth
-
-	// Background mode: spawn a Claude agent in a tmux session
-	// The Claude agent handles MR processing using git commands and beads
 
 	// Working directory is the refinery worktree (shares .git with mayor/polecats)
 	refineryRigDir := filepath.Join(m.rig.Path, "refinery", "rig")
@@ -134,6 +114,29 @@ func (m *Manager) Start(foreground bool, agentOverride string) error {
 	if err := runtime.EnsureSettingsForRole(refineryParentDir, "refinery", runtimeConfig); err != nil {
 		return fmt.Errorf("ensuring runtime settings: %w", err)
 	}
+
+	if running {
+		// Session exists - check if runtime is actually running (healthy vs zombie).
+		// Copilot CLI can shell out during work, so we require copilot presence.
+		// Claude can report as "node", "claude", or a version number like "2.0.76".
+		if runtimeConfig != nil && runtimeConfig.Provider == "copilot" {
+			if t.IsCopilotRunning(sessionID) {
+				return ErrAlreadyRunning
+			}
+		} else if t.IsClaudeRunning(sessionID) {
+			return ErrAlreadyRunning
+		}
+		// Zombie - tmux alive but runtime dead. Kill and recreate.
+		_, _ = fmt.Fprintln(m.output, "⚠ Detected zombie session (tmux alive, agent dead). Recreating...")
+		if err := t.KillSession(sessionID); err != nil {
+			return fmt.Errorf("killing zombie session: %w", err)
+		}
+	}
+
+	// Note: No PID check per ZFC - tmux session is the source of truth
+
+	// Background mode: spawn a Claude agent in a tmux session
+	// The Claude agent handles MR processing using git commands and beads
 
 	// Build startup command first
 	var command string

@@ -728,16 +728,23 @@ func (t *Tmux) GetPanePID(session string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
-// hasClaudeChild checks if a process has a child running claude/node/copilot.
+// hasAgentChild checks if a process has a child running one of the provided names.
 // Used when the pane command is a shell (bash, zsh) that launched an agent.
-func hasClaudeChild(pid string) bool {
+func hasAgentChild(pid string, names ...string) bool {
+	if len(names) == 0 {
+		return false
+	}
+	want := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		want[name] = struct{}{}
+	}
 	// Use pgrep to find child processes
 	cmd := exec.Command("pgrep", "-P", pid, "-l")
 	out, err := cmd.Output()
 	if err != nil {
 		return false
 	}
-	// Check if any child is node, claude, or copilot
+	// Check if any child is a matching process name
 	lines := strings.Split(string(out), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -748,12 +755,23 @@ func hasClaudeChild(pid string) bool {
 		parts := strings.Fields(line)
 		if len(parts) >= 2 {
 			name := parts[1]
-			if name == "node" || name == "claude" || name == "copilot" {
+			if _, ok := want[name]; ok {
 				return true
 			}
 		}
 	}
 	return false
+}
+
+// hasClaudeChild checks if a process has a child running claude/node/copilot.
+// Used when the pane command is a shell (bash, zsh) that launched an agent.
+func hasClaudeChild(pid string) bool {
+	return hasAgentChild(pid, "node", "claude", "copilot")
+}
+
+// hasCopilotChild checks if a process has a child running copilot.
+func hasCopilotChild(pid string) bool {
+	return hasAgentChild(pid, "copilot")
 }
 
 // FindSessionByWorkDir finds tmux sessions where the pane's current working directory
@@ -979,6 +997,34 @@ func (t *Tmux) IsClaudeRunning(session string) bool {
 			break
 		}
 	}
+	return false
+}
+
+// IsCopilotRunning checks if Copilot CLI appears to be running in the session.
+// This is stricter than IsClaudeRunning to avoid false positives when Copilot
+// shells out to helper commands (e.g., git, go, rg).
+func (t *Tmux) IsCopilotRunning(session string) bool {
+	// Check for copilot pane command directly.
+	if t.IsAgentRunning(session, "copilot") {
+		return true
+	}
+
+	cmd, err := t.GetPaneCommand(session)
+	if err != nil {
+		return false
+	}
+
+	// If pane command is a shell, check for copilot child process.
+	for _, shell := range constants.SupportedShells {
+		if cmd == shell {
+			pid, err := t.GetPanePID(session)
+			if err == nil && pid != "" {
+				return hasCopilotChild(pid)
+			}
+			break
+		}
+	}
+
 	return false
 }
 
