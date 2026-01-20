@@ -601,12 +601,14 @@ func updateAgentStateOnDone(cwd, townRoot, exitType, _ string) { // issueID unus
 
 	if agentBead.HookBead != "" {
 		hookedBeadID := agentBead.HookBead
-		if hookedBead, err := bd.Show(hookedBeadID); err == nil {
+		hookBeadsDir := beads.ResolveHookDir(townRoot, hookedBeadID, beadsPath)
+		hookBD := beads.New(hookBeadsDir)
+		if hookedBead, err := hookBD.Show(hookedBeadID); err == nil {
 			switch exitType {
 			case ExitDeferred:
 				if hookedBead.Status != "closed" && hookedBead.Status != "deferred" && hookedBead.Status != beads.StatusPinned {
 					status := "deferred"
-					if err := bd.Update(hookedBeadID, beads.UpdateOptions{Status: &status}); err != nil {
+					if err := hookBD.Update(hookedBeadID, beads.UpdateOptions{Status: &status}); err != nil {
 						// Non-fatal: warn but continue
 						fmt.Fprintf(os.Stderr, "Warning: couldn't defer hooked bead %s: %v\n", hookedBeadID, err)
 					}
@@ -621,13 +623,13 @@ func updateAgentStateOnDone(cwd, townRoot, exitType, _ string) { // issueID unus
 					// Order matters: wisp closes -> unblocks base bead -> base bead closes.
 					attachment := beads.ParseAttachmentFields(hookedBead)
 					if attachment != nil && attachment.AttachedMolecule != "" {
-						if err := bd.Close(attachment.AttachedMolecule); err != nil {
+						if err := hookBD.Close(attachment.AttachedMolecule); err != nil {
 							// Non-fatal: warn but continue
 							fmt.Fprintf(os.Stderr, "Warning: couldn't close attached molecule %s: %v\n", attachment.AttachedMolecule, err)
 						}
 					}
 
-					if err := bd.Close(hookedBeadID); err != nil {
+					if err := hookBD.Close(hookedBeadID); err != nil {
 						// Non-fatal: warn but continue
 						fmt.Fprintf(os.Stderr, "Warning: couldn't close hooked bead %s: %v\n", hookedBeadID, err)
 					}
