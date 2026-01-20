@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -126,7 +127,12 @@ func runBatchSling(beadIDs []string, rigName string, townBeadsDir string) error 
 		// Nudge the polecat
 		if spawnInfo.Pane != "" {
 			if err := injectStartPrompt(spawnInfo.Pane, beadID, slingSubject, slingArgs); err != nil {
-				fmt.Printf("  %s Could not nudge (agent will discover via gt prime)\n", style.Dim.Render("○"))
+				if errors.Is(err, errNudgeSelf) {
+					fmt.Printf("  %s Skipping start prompt (current pane)\n", style.Dim.Render("○"))
+					fmt.Printf("    Work is on your hook - run gt hook to begin\n")
+				} else {
+					fmt.Printf("  %s Could not nudge (agent will discover via gt prime)\n", style.Dim.Render("○"))
+				}
 			} else {
 				fmt.Printf("  %s Start prompt sent\n", style.Bold.Render("▶"))
 			}
