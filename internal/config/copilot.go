@@ -18,6 +18,7 @@ type CopilotTrustConfig struct {
 }
 
 // EnsureCopilotTrustedFolder ensures Copilot trusts the session's working directory.
+// For polecats, trusts the polecats parent directory to cover all worktrees.
 func EnsureCopilotTrustedFolder(cfg CopilotTrustConfig) error {
 	if cfg.WorkDir == "" {
 		return nil
@@ -31,7 +32,17 @@ func EnsureCopilotTrustedFolder(cfg CopilotTrustConfig) error {
 		return nil
 	}
 
-	if _, err := copilot.EnsureTrustedFolder(cfg.WorkDir); err != nil {
+	// For polecats, trust the polecats/ parent directory instead of individual worktrees.
+	// This prevents trust prompts when working in any polecat worktree.
+	trustPath := cfg.WorkDir
+	if cfg.Role == "polecat" && cfg.RigPath != "" {
+		polecatsDir := filepath.Join(cfg.RigPath, "polecats")
+		if strings.HasPrefix(filepath.Clean(cfg.WorkDir), filepath.Clean(polecatsDir)) {
+			trustPath = polecatsDir
+		}
+	}
+
+	if _, err := copilot.EnsureTrustedFolder(trustPath); err != nil {
 		return fmt.Errorf("updating copilot trusted_folders: %w", err)
 	}
 	return nil
