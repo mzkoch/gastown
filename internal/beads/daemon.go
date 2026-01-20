@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -38,6 +39,9 @@ type BdDaemonHealth struct {
 // CheckBdDaemonHealth checks the health of all bd daemons.
 // Returns nil if no daemons are running (which is fine, bd will use direct mode).
 func CheckBdDaemonHealth() (*BdDaemonHealth, error) {
+	if os.Getenv("BEADS_NO_DAEMON") != "" {
+		return nil, nil
+	}
 	cmd := exec.Command("bd", "daemon", "health", "--json")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -62,6 +66,9 @@ func CheckBdDaemonHealth() (*BdDaemonHealth, error) {
 // Returns a warning message if there were issues, or empty string if everything is fine.
 // This is non-blocking - it will not fail if daemons can't be started.
 func EnsureBdDaemonHealth(workDir string) string {
+	if os.Getenv("BEADS_NO_DAEMON") != "" {
+		return ""
+	}
 	health, err := CheckBdDaemonHealth()
 	if err != nil || health == nil {
 		// Can't check daemon health - proceed without warning
@@ -124,6 +131,9 @@ func restartBdDaemons() error { //nolint:unparam // error return kept for future
 // StartBdDaemonIfNeeded starts the bd daemon for a specific workspace if not running.
 // This is a best-effort operation - failures are logged but don't block execution.
 func StartBdDaemonIfNeeded(workDir string) error {
+	if os.Getenv("BEADS_NO_DAEMON") != "" {
+		return nil
+	}
 	cmd := exec.Command("bd", "daemon", "start")
 	cmd.Dir = workDir
 	return cmd.Run()

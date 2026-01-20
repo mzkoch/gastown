@@ -2,6 +2,7 @@ package doctor
 
 import (
 	"bytes"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -28,6 +29,14 @@ func NewBdDaemonCheck() *BdDaemonCheck {
 
 // Run checks if the bd daemon is running and healthy.
 func (c *BdDaemonCheck) Run(ctx *CheckContext) *CheckResult {
+	if os.Getenv("BEADS_NO_DAEMON") != "" {
+		return &CheckResult{
+			Name:    c.Name(),
+			Status:  StatusOK,
+			Message: "bd daemon checks disabled (BEADS_NO_DAEMON=1)",
+		}
+	}
+
 	// Check daemon status
 	cmd := exec.Command("bd", "daemon", "status")
 	cmd.Dir = ctx.TownRoot
@@ -82,6 +91,9 @@ func (c *BdDaemonCheck) Run(ctx *CheckContext) *CheckResult {
 
 // tryStartDaemon attempts to start the bd daemon and returns any error output.
 func (c *BdDaemonCheck) tryStartDaemon(ctx *CheckContext) *startError {
+	if os.Getenv("BEADS_NO_DAEMON") != "" {
+		return nil
+	}
 	cmd := exec.Command("bd", "daemon", "start")
 	cmd.Dir = ctx.TownRoot
 	var stdout, stderr bytes.Buffer
