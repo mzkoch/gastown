@@ -44,6 +44,9 @@ func TestMain(m *testing.M) {
 	_ = os.Setenv("XDG_STATE_HOME", testState)
 	_ = os.Setenv("XDG_CONFIG_HOME", testConfig)
 	_ = os.Setenv("XDG_CACHE_HOME", testCache)
+	
+	// Disable bd daemon to prevent hangs
+	_ = os.Setenv("BEADS_NO_DAEMON", "1")
 
 	// Run tests
 	code := m.Run()
