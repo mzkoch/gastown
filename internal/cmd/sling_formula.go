@@ -260,6 +260,12 @@ func runSlingFormula(args []string) error {
 		return nil
 	}
 
+	if isCurrentPane(targetPane) {
+		fmt.Printf("%s Skipping start prompt (current pane)\n", style.Dim.Render("○"))
+		fmt.Printf("  Work is on your hook - run gt hook to begin\n")
+		return nil
+	}
+
 	// Skip nudge during tests to prevent agent self-interruption
 	if os.Getenv("GT_TEST_NO_NUDGE") != "" {
 		return nil

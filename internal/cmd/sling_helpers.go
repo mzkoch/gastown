@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,6 +14,8 @@ import (
 	"github.com/steveyegge/gastown/internal/tmux"
 	"github.com/steveyegge/gastown/internal/workspace"
 )
+
+var errNudgeSelf = errors.New("target pane is current pane")
 
 // beadInfo holds status and assignee for a bead.
 type beadInfo struct {
@@ -242,6 +245,10 @@ func injectStartPrompt(pane, beadID, subject, args string) error {
 		return fmt.Errorf("no target pane")
 	}
 
+	if isCurrentPane(pane) {
+		return errNudgeSelf
+	}
+
 	// Skip nudge during tests to prevent agent self-interruption
 	if os.Getenv("GT_TEST_NO_NUDGE") != "" {
 		return nil
@@ -265,6 +272,11 @@ func injectStartPrompt(pane, beadID, subject, args string) error {
 	// Use the reliable nudge pattern (same as gt nudge / tmux.NudgeSession)
 	t := tmux.NewTmux()
 	return t.NudgePane(pane, prompt)
+}
+
+func isCurrentPane(pane string) bool {
+	current := os.Getenv("TMUX_PANE")
+	return current != "" && pane == current
 }
 
 // getSessionFromPane extracts session name from a pane target.

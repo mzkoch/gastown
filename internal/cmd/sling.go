@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -526,9 +527,14 @@ func runSling(cmd *cobra.Command, args []string) error {
 		}
 
 		if err := injectStartPrompt(targetPane, beadID, slingSubject, slingArgs); err != nil {
-			// Graceful fallback for no-tmux mode
-			fmt.Printf("%s Could not nudge (no tmux?): %v\n", style.Dim.Render("○"), err)
-			fmt.Printf("  Agent will discover work via gt prime / bd show\n")
+			if errors.Is(err, errNudgeSelf) {
+				fmt.Printf("%s Skipping start prompt (current pane)\n", style.Dim.Render("○"))
+				fmt.Printf("  Work is on your hook - run gt hook to begin\n")
+			} else {
+				// Graceful fallback for no-tmux mode
+				fmt.Printf("%s Could not nudge (no tmux?): %v\n", style.Dim.Render("○"), err)
+				fmt.Printf("  Agent will discover work via gt prime / bd show\n")
+			}
 		} else {
 			fmt.Printf("%s Start prompt sent\n", style.Bold.Render("▶"))
 		}
