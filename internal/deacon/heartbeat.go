@@ -73,7 +73,32 @@ func ReadHeartbeat(townRoot string) *Heartbeat {
 		return nil
 	}
 
+	if hb.Timestamp.IsZero() {
+		if fallback := readHeartbeatFallback(data, hbFile); fallback != nil {
+			return fallback
+		}
+	}
+
 	return &hb
+}
+
+type heartbeatFallback struct {
+	LastPatrol string `json:"last_patrol"`
+}
+
+func readHeartbeatFallback(data []byte, hbFile string) *Heartbeat {
+	var fallback heartbeatFallback
+	if err := json.Unmarshal(data, &fallback); err == nil && fallback.LastPatrol != "" {
+		if ts, err := time.Parse(time.RFC3339Nano, fallback.LastPatrol); err == nil {
+			return &Heartbeat{Timestamp: ts}
+		}
+	}
+
+	if info, err := os.Stat(hbFile); err == nil {
+		return &Heartbeat{Timestamp: info.ModTime()}
+	}
+
+	return nil
 }
 
 // Age returns how old the heartbeat is.
