@@ -11,12 +11,12 @@ import (
 	"github.com/steveyegge/gastown/internal/workspace"
 )
 
-// filterGTEnv removes GT_* and BD_* environment variables to isolate test subprocess.
+// filterGTEnv removes GT_*, BD_*, and BEADS_* environment variables to isolate test subprocess.
 // This prevents tests from inheriting the parent workspace's Gas Town configuration.
 func filterGTEnv(env []string) []string {
 	filtered := make([]string, 0, len(env))
 	for _, e := range env {
-		if strings.HasPrefix(e, "GT_") || strings.HasPrefix(e, "BD_") {
+		if strings.HasPrefix(e, "GT_") || strings.HasPrefix(e, "BD_") || strings.HasPrefix(e, "BEADS_") {
 			continue
 		}
 		filtered = append(filtered, e)
