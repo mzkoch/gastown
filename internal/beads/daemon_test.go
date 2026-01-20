@@ -5,6 +5,24 @@ import (
 	"testing"
 )
 
+func TestCheckBdDaemonHealth_NoDaemonEnv(t *testing.T) {
+	t.Setenv("BEADS_NO_DAEMON", "1")
+	health, err := CheckBdDaemonHealth()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if health != nil {
+		t.Fatalf("expected nil health when BEADS_NO_DAEMON is set, got %+v", health)
+	}
+}
+
+func TestEnsureBdDaemonHealth_NoDaemonEnv(t *testing.T) {
+	t.Setenv("BEADS_NO_DAEMON", "1")
+	if warning := EnsureBdDaemonHealth(t.TempDir()); warning != "" {
+		t.Fatalf("expected no warning when BEADS_NO_DAEMON is set, got %q", warning)
+	}
+}
+
 func TestCountBdActivityProcesses(t *testing.T) {
 	count := CountBdActivityProcesses()
 	if count < 0 {
