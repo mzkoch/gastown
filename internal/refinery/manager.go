@@ -207,10 +207,23 @@ func (m *Manager) Start(foreground bool, agentOverride string) error {
 		Topic:     "patrol",
 	}) // Non-fatal
 
+	// Wait for runtime to be ready (prompt visible) before sending propulsion nudge.
+	// This prevents the Escape key in NudgeSession from canceling "Thinking" state.
+	// The startup nudge above triggers /resume beacon processing which puts Claude in
+	// "Thinking" state. We must wait for that to complete before sending the propulsion nudge.
+	// See: https://github.com/steveyegge/gastown/issues/hq-cv-5ktuq
+	if err := t.WaitForRuntimeReady(sessionID, runtimeConfig, 30*time.Second); err != nil {
+		// Non-fatal: if prompt detection fails, use longer fixed delay (10s minimum)
+		// to ensure beacon processing completes before propulsion nudge.
+		delay := runtimeConfig.Tmux.ReadyDelayMs
+		if delay < 10000 {
+			delay = 10000 // Override copilot's 3s default - too short for beacon processing
+		}
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+	}
+
 	// GUPP: Gas Town Universal Propulsion Principle
 	// Send the propulsion nudge to trigger autonomous patrol execution.
-	// Wait for beacon to be fully processed (needs to be separate prompt)
-	time.Sleep(2 * time.Second)
 	_ = t.NudgeSession(sessionID, session.PropulsionNudgeForRole("refinery", refineryRigDir)) // Non-fatal
 
 	return nil
