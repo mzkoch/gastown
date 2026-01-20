@@ -4,18 +4,21 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/steveyegge/gastown/internal/activity"
+	"github.com/steveyegge/gastown/internal/beads"
 	"github.com/steveyegge/gastown/internal/workspace"
 )
 
 // LiveConvoyFetcher fetches convoy data from beads.
 type LiveConvoyFetcher struct {
 	townBeads string
+	townRoot  string
 }
 
 // NewLiveConvoyFetcher creates a fetcher for the current workspace.
@@ -27,6 +30,7 @@ func NewLiveConvoyFetcher() (*LiveConvoyFetcher, error) {
 
 	return &LiveConvoyFetcher{
 		townBeads: filepath.Join(townRoot, ".beads"),
+		townRoot:  townRoot,
 	}, nil
 }
 
@@ -439,143 +443,91 @@ func calculateWorkStatus(completed, total int, activityColor string) string {
 	}
 }
 
-// FetchMergeQueue fetches open PRs from configured repos.
+// FetchMergeQueue fetches merge-request beads from the current rig.
 func (f *LiveConvoyFetcher) FetchMergeQueue() ([]MergeQueueRow, error) {
-	// Repos to query for PRs
-	repos := []struct {
-		Full  string // Full repo path for gh CLI
-		Short string // Short name for display
-	}{
-		{"michaellady/roxas", "roxas"},
-		{"michaellady/gastown", "gastown"},
+	rigName := os.Getenv("GT_RIG")
+	if rigName == "" {
+		rigName = inferRigFromCwd(f.townRoot)
+	}
+	if rigName == "" {
+		return nil, fmt.Errorf("could not determine rig for merge queue")
 	}
 
-	var result []MergeQueueRow
+	b := beads.New(filepath.Join(f.townRoot, rigName))
+	issues, err := b.List(beads.ListOptions{
+		Type:     "merge-request",
+		Status:   "open",
+		Priority: -1,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("listing merge queue: %w", err)
+	}
 
-	for _, repo := range repos {
-		prs, err := f.fetchPRsForRepo(repo.Full, repo.Short)
-		if err != nil {
-			// Non-fatal: continue with other repos
+	rows := make([]MergeQueueRow, 0, len(issues))
+	for _, issue := range issues {
+		fields := beads.ParseMRFields(issue)
+		if fields == nil {
 			continue
 		}
-		result = append(result, prs...)
-	}
-
-	return result, nil
-}
-
-// prResponse represents the JSON response from gh pr list.
-type prResponse struct {
-	Number            int    `json:"number"`
-	Title             string `json:"title"`
-	URL               string `json:"url"`
-	Mergeable         string `json:"mergeable"`
-	StatusCheckRollup []struct {
-		State      string `json:"state"`
-		Status     string `json:"status"`
-		Conclusion string `json:"conclusion"`
-	} `json:"statusCheckRollup"`
-}
-
-// fetchPRsForRepo fetches open PRs for a single repo.
-func (f *LiveConvoyFetcher) fetchPRsForRepo(repoFull, repoShort string) ([]MergeQueueRow, error) {
-	// #nosec G204 -- gh is a trusted CLI, repo is from hardcoded list
-	cmd := exec.Command("gh", "pr", "list",
-		"--repo", repoFull,
-		"--state", "open",
-		"--json", "number,title,url,mergeable,statusCheckRollup")
-
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("fetching PRs for %s: %w", repoFull, err)
-	}
-
-	var prs []prResponse
-	if err := json.Unmarshal(stdout.Bytes(), &prs); err != nil {
-		return nil, fmt.Errorf("parsing PRs for %s: %w", repoFull, err)
-	}
-
-	result := make([]MergeQueueRow, 0, len(prs))
-	for _, pr := range prs {
+		mergeable := determineBeadsMergeable(issue)
 		row := MergeQueueRow{
-			Number: pr.Number,
-			Repo:   repoShort,
-			Title:  pr.Title,
-			URL:    pr.URL,
+			ID:        issue.ID,
+			Repo:      rigName,
+			Title:     issue.Title,
+			CIStatus:  determineBeadsCIStatus(issue, fields),
+			Mergeable: mergeable,
 		}
-
-		// Determine CI status from statusCheckRollup
-		row.CIStatus = determineCIStatus(pr.StatusCheckRollup)
-
-		// Determine mergeable status
-		row.Mergeable = determineMergeableStatus(pr.Mergeable)
-
-		// Determine color class based on overall status
 		row.ColorClass = determineColorClass(row.CIStatus, row.Mergeable)
-
-		result = append(result, row)
+		rows = append(rows, row)
 	}
 
-	return result, nil
+	return rows, nil
 }
 
 // determineCIStatus evaluates the overall CI status from status checks.
-func determineCIStatus(checks []struct {
-	State      string `json:"state"`
-	Status     string `json:"status"`
-	Conclusion string `json:"conclusion"`
-}) string {
-	if len(checks) == 0 {
-		return "pending"
-	}
-
-	hasFailure := false
-	hasPending := false
-
-	for _, check := range checks {
-		// Check conclusion first (for completed checks)
-		switch check.Conclusion {
-		case "failure", "cancelled", "timed_out", "action_required": //nolint:misspell // GitHub API returns "cancelled" (British spelling)
-			hasFailure = true
-		case "success", "skipped", "neutral":
-			// Pass
-		default:
-			// Check status for in-progress checks
-			switch check.Status {
-			case "queued", "in_progress", "waiting", "pending", "requested":
-				hasPending = true
-			}
-			// Also check state field
-			switch check.State {
-			case "FAILURE", "ERROR":
-				hasFailure = true
-			case "PENDING", "EXPECTED":
-				hasPending = true
-			}
+func determineBeadsCIStatus(issue *beads.Issue, fields *beads.MRFields) string {
+	switch strings.ToLower(fields.CloseReason) {
+	case "merged":
+		return "pass"
+	case "conflict":
+		return "fail"
+	default:
+		if issue.Status == "open" || issue.Status == "in_progress" {
+			return "pending"
 		}
 	}
-
-	if hasFailure {
-		return "fail"
-	}
-	if hasPending {
-		return "pending"
-	}
-	return "pass"
+	return "pending"
 }
 
-// determineMergeableStatus converts GitHub's mergeable field to display value.
-func determineMergeableStatus(mergeable string) string {
-	switch strings.ToUpper(mergeable) {
-	case "MERGEABLE":
+func determineBeadsMergeable(issue *beads.Issue) string {
+	switch issue.Status {
+	case "closed":
 		return "ready"
-	case "CONFLICTING":
-		return "conflict"
-	default:
+	case "in_progress":
 		return "pending"
+	default:
+		if len(issue.BlockedBy) > 0 || issue.BlockedByCount > 0 {
+			return "conflict"
+		}
+		return "ready"
 	}
+}
+
+func inferRigFromCwd(townRoot string) string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	rel, err := filepath.Rel(townRoot, cwd)
+	if err != nil {
+		return ""
+	}
+	rel = filepath.ToSlash(rel)
+	parts := strings.Split(rel, "/")
+	if len(parts) > 0 && parts[0] != "" && parts[0] != "." {
+		return parts[0]
+	}
+	return ""
 }
 
 // determineColorClass determines the row color based on CI and merge status.

@@ -28,9 +28,9 @@ type PolecatRow struct {
 	StatusHint   string        // Last line from pane (optional)
 }
 
-// MergeQueueRow represents a PR in the merge queue.
+// MergeQueueRow represents a merge request in the queue.
 type MergeQueueRow struct {
-	Number     int
+	ID         string
 	Repo       string // Short repo name (e.g., "roxas", "gastown")
 	Title      string
 	URL        string
