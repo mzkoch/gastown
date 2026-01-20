@@ -1021,15 +1021,19 @@ func (t *Tmux) IsCopilotRunning(session string) bool {
 		return false
 	}
 
-	// If pane command is a shell, check for copilot child process.
+	// Copilot may exec external commands; any non-shell command implies activity.
 	for _, shell := range constants.SupportedShells {
 		if cmd == shell {
+			// If pane command is a shell, check for copilot child process.
 			pid, err := t.GetPanePID(session)
 			if err == nil && pid != "" {
 				return hasCopilotChild(pid)
 			}
-			break
+			return false
 		}
+	}
+	if cmd != "" {
+		return true
 	}
 
 	return false
