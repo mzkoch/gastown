@@ -735,8 +735,8 @@ func (t *Tmux) GetPanePID(session string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
-// hasClaudeChild checks if a process has a child running claude/node.
-// Used when the pane command is a shell (bash, zsh) that launched claude.
+// hasClaudeChild checks if a process has a child running claude/node/copilot.
+// Used when the pane command is a shell (bash, zsh) that launched an agent.
 func hasClaudeChild(pid string) bool {
 	// Use pgrep to find child processes
 	cmd := exec.Command("pgrep", "-P", pid, "-l")
@@ -744,7 +744,7 @@ func hasClaudeChild(pid string) bool {
 	if err != nil {
 		return false
 	}
-	// Check if any child is node or claude
+	// Check if any child is node, claude, or copilot
 	lines := strings.Split(string(out), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -755,7 +755,7 @@ func hasClaudeChild(pid string) bool {
 		parts := strings.Fields(line)
 		if len(parts) >= 2 {
 			name := parts[1]
-			if name == "node" || name == "claude" {
+			if name == "node" || name == "claude" || name == "copilot" {
 				return true
 			}
 		}
@@ -957,13 +957,14 @@ func (t *Tmux) IsAgentRunning(session string, expectedPaneCommands ...string) bo
 	return cmd != ""
 }
 
-// IsClaudeRunning checks if Claude appears to be running in the session.
+// IsClaudeRunning checks if Claude (or copilot) appears to be running in the session.
 // Only trusts the pane command - UI markers in scrollback cause false positives.
 // Claude can report as "node", "claude", or a version number like "2.0.76".
-// Also checks for child processes when the pane is a shell running claude via "bash -c".
+// Copilot reports as "copilot".
+// Also checks for child processes when the pane is a shell running an agent via "bash -c".
 func (t *Tmux) IsClaudeRunning(session string) bool {
 	// Check for known command names first
-	if t.IsAgentRunning(session, "node", "claude") {
+	if t.IsAgentRunning(session, "node", "claude", "copilot") {
 		return true
 	}
 	// Check for version pattern (e.g., "2.0.76") - Claude Code shows version as pane command
