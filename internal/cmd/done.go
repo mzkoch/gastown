@@ -601,11 +601,24 @@ func updateAgentStateOnDone(cwd, townRoot, exitType, _ string) { // issueID unus
 
 	if agentBead.HookBead != "" {
 		hookedBeadID := agentBead.HookBead
-		// Only close if the hooked bead exists and is still in "hooked" status
-		if hookedBead, err := bd.Show(hookedBeadID); err == nil && hookedBead.Status == beads.StatusHooked {
-			if err := bd.Close(hookedBeadID); err != nil {
-				// Non-fatal: warn but continue
-				fmt.Fprintf(os.Stderr, "Warning: couldn't close hooked bead %s: %v\n", hookedBeadID, err)
+		if hookedBead, err := bd.Show(hookedBeadID); err == nil {
+			switch exitType {
+			case ExitDeferred:
+				if hookedBead.Status != "closed" && hookedBead.Status != "deferred" && hookedBead.Status != beads.StatusPinned {
+					status := "deferred"
+					if err := bd.Update(hookedBeadID, beads.UpdateOptions{Status: &status}); err != nil {
+						// Non-fatal: warn but continue
+						fmt.Fprintf(os.Stderr, "Warning: couldn't defer hooked bead %s: %v\n", hookedBeadID, err)
+					}
+				}
+			default:
+				// Only close if the hooked bead exists and is still in "hooked" status
+				if hookedBead.Status == beads.StatusHooked {
+					if err := bd.Close(hookedBeadID); err != nil {
+						// Non-fatal: warn but continue
+						fmt.Fprintf(os.Stderr, "Warning: couldn't close hooked bead %s: %v\n", hookedBeadID, err)
+					}
+				}
 			}
 		}
 	}
