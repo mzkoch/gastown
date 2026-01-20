@@ -22,6 +22,15 @@ func cleanGTEnv() []string {
 	return clean
 }
 
+func resolveHQPath(t *testing.T, path string) string {
+	t.Helper()
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return filepath.Clean(path)
+	}
+	return resolved
+}
+
 // TestRoleHomeE2E validates that gt role home returns correct paths
 // for all role types after a full gt install.
 func TestRoleHomeE2E(t *testing.T) {
@@ -34,6 +43,7 @@ func TestRoleHomeE2E(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	rigName := "testrig"
 
@@ -105,6 +115,7 @@ func TestRoleHomeMissingFlags(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	tests := []struct {
 		name string
@@ -163,6 +174,7 @@ func TestRoleHomeCwdDetection(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	rigName := "testrig"
 
@@ -246,6 +258,7 @@ func TestRoleEnvCwdDetection(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	rigName := "testrig"
 
@@ -359,6 +372,7 @@ func TestRoleListE2E(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	cmd = exec.Command(gtBinary, "role", "list")
 	cmd.Dir = hqPath
@@ -396,6 +410,7 @@ func TestRoleShowE2E(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	rigName := "testrig"
 
@@ -505,6 +520,7 @@ func TestRoleShowMismatch(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	// Run from mayor dir but set GT_ROLE to deacon
 	cmd = exec.Command(gtBinary, "role", "show")
@@ -554,6 +570,7 @@ func TestRoleDetectE2E(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	rigName := "testrig"
 
@@ -666,6 +683,7 @@ func TestRoleDetectIgnoresGTRole(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	// Run from mayor dir but set GT_ROLE to deacon
 	cmd = exec.Command(gtBinary, "role", "detect")
@@ -705,6 +723,7 @@ func TestRoleDetectInvalidPaths(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	rigName := "testrig"
 
@@ -784,6 +803,7 @@ func TestRoleEnvIncompleteEnvVars(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	rigName := "testrig"
 
@@ -928,6 +948,7 @@ func TestRoleEnvCwdMismatchFromIncompleteDir(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	rigName := "testrig"
 
@@ -1000,6 +1021,7 @@ func TestRoleHomeInvalidPaths(t *testing.T) {
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 	}
+	hqPath = resolveHQPath(t, hqPath)
 
 	rigName := "testrig"
 
