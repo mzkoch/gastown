@@ -9,11 +9,13 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestRoutesJSONLCorruption tests that routes.jsonl is not corrupted by bd auto-export.
@@ -22,6 +24,8 @@ func TestRoutesJSONLCorruption(t *testing.T) {
 	if _, err := exec.LookPath("bd"); err != nil {
 		t.Skip("bd not installed, skipping test")
 	}
+
+	t.Setenv("BEADS_NO_DAEMON", "1")
 
 	t.Run("TownLevelRoutesNotCorrupted", func(t *testing.T) {
 		// Test that gt install creates issues.jsonl before routes.jsonl
@@ -32,9 +36,18 @@ func TestRoutesJSONLCorruption(t *testing.T) {
 		gtBinary := buildGT(t)
 
 		// Install town
-		cmd := exec.Command(gtBinary, "install", townRoot, "--name", "test-town")
-		cmd.Env = append(os.Environ(), "HOME="+tmpDir)
-		if output, err := cmd.CombinedOutput(); err != nil {
+		output, err := runCommand(
+			t,
+			commandTimeout,
+			"gt install",
+			commandOptions{env: append(os.Environ(), "HOME="+tmpDir)},
+			gtBinary,
+			"install",
+			townRoot,
+			"--name",
+			"test-town",
+		)
+		if err != nil {
 			t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 		}
 
@@ -60,9 +73,21 @@ func TestRoutesJSONLCorruption(t *testing.T) {
 		}
 
 		// Create an issue and verify routes.jsonl is still valid
-		cmd = exec.Command("bd", "--no-daemon", "-q", "create", "--type", "task", "--title", "test issue")
-		cmd.Dir = townRoot
-		if output, err := cmd.CombinedOutput(); err != nil {
+		output, err = runCommand(
+			t,
+			commandTimeout,
+			"bd create",
+			commandOptions{dir: townRoot},
+			"bd",
+			"--no-daemon",
+			"-q",
+			"create",
+			"--type",
+			"task",
+			"--title",
+			"test issue",
+		)
+		if err != nil {
 			t.Fatalf("bd create failed: %v\nOutput: %s", err, output)
 		}
 
@@ -92,17 +117,34 @@ func TestRoutesJSONLCorruption(t *testing.T) {
 		repoDir := createTestGitRepo(t, "test-repo")
 
 		// Install town
-		cmd := exec.Command(gtBinary, "install", townRoot, "--name", "test-town")
-		cmd.Env = append(os.Environ(), "HOME="+tmpDir)
-		if output, err := cmd.CombinedOutput(); err != nil {
+		output, err := runCommand(
+			t,
+			commandTimeout,
+			"gt install",
+			commandOptions{env: append(os.Environ(), "HOME="+tmpDir)},
+			gtBinary,
+			"install",
+			townRoot,
+			"--name",
+			"test-town",
+		)
+		if err != nil {
 			t.Fatalf("gt install failed: %v\nOutput: %s", err, output)
 		}
 
 		// Add a rig
-		cmd = exec.Command(gtBinary, "rig", "add", "testrig", repoDir)
-		cmd.Dir = townRoot
-		cmd.Env = append(os.Environ(), "HOME="+tmpDir)
-		if output, err := cmd.CombinedOutput(); err != nil {
+		output, err = runCommand(
+			t,
+			commandTimeout,
+			"gt rig add",
+			commandOptions{dir: townRoot, env: append(os.Environ(), "HOME="+tmpDir)},
+			gtBinary,
+			"rig",
+			"add",
+			"testrig",
+			repoDir,
+		)
+		if err != nil {
 			t.Fatalf("gt rig add failed: %v\nOutput: %s", err, output)
 		}
 
@@ -133,9 +175,19 @@ func TestRoutesJSONLCorruption(t *testing.T) {
 		os.MkdirAll(beadsDir, 0755)
 
 		// Initialize beads
-		cmd := exec.Command("bd", "--no-daemon", "init", "--prefix", "test", "--quiet")
-		cmd.Dir = tmpDir
-		if output, err := cmd.CombinedOutput(); err != nil {
+		output, err := runCommand(
+			t,
+			commandTimeout,
+			"bd init",
+			commandOptions{dir: tmpDir},
+			"bd",
+			"--no-daemon",
+			"init",
+			"--prefix",
+			"test",
+			"--quiet",
+		)
+		if err != nil {
 			t.Fatalf("bd init failed: %v\nOutput: %s", err, output)
 		}
 
@@ -151,9 +203,20 @@ func TestRoutesJSONLCorruption(t *testing.T) {
 		}
 
 		// Create an issue - this triggers auto-export
-		cmd = exec.Command("bd", "--no-daemon", "-q", "create", "--type", "task", "--title", "bug reproduction")
-		cmd.Dir = tmpDir
-		cmd.CombinedOutput() // Ignore error - we're testing the corruption
+		_, _ = runCommand(
+			t,
+			commandTimeout,
+			"bd create (corruption reproduction)",
+			commandOptions{dir: tmpDir},
+			"bd",
+			"--no-daemon",
+			"-q",
+			"create",
+			"--type",
+			"task",
+			"--title",
+			"bug reproduction",
+		) // Ignore error - we're testing the corruption
 
 		// Check if routes.jsonl was corrupted
 		newRoutesContent, err := os.ReadFile(routesPath)
@@ -172,3 +235,36 @@ func TestRoutesJSONLCorruption(t *testing.T) {
 }
 
 // Note: createTestGitRepo is defined in rig_integration_test.go
+
+const commandTimeout = 2 * time.Minute
+
+type commandOptions struct {
+	dir string
+	env []string
+}
+
+func runCommand(t *testing.T, timeout time.Duration, description string, opts commandOptions, name string, args ...string) ([]byte, error) {
+	t.Helper()
+
+	ctx := context.Background()
+	var cancel context.CancelFunc
+	if timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
+	cmd := exec.CommandContext(ctx, name, args...)
+	if opts.dir != "" {
+		cmd.Dir = opts.dir
+	}
+	if opts.env != nil {
+		cmd.Env = opts.env
+	}
+
+	output, err := cmd.CombinedOutput()
+	if ctx.Err() == context.DeadlineExceeded {
+		t.Fatalf("%s timed out after %s\nOutput: %s", description, timeout, output)
+	}
+
+	return output, err
+}
