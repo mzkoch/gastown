@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/steveyegge/gastown/internal/beads"
+	"github.com/steveyegge/gastown/internal/claude"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 	"github.com/steveyegge/gastown/internal/deacon"
@@ -407,10 +408,9 @@ func startDeaconSession(t *tmux.Tmux, sessionName, agentOverride string) error {
 		return fmt.Errorf("creating deacon directory: %w", err)
 	}
 
-	// Ensure runtime settings exist (autonomous role needs mail in SessionStart)
-	runtimeConfig := config.ResolveRoleAgentConfig("deacon", townRoot, "")
-	if err := runtime.EnsureSettingsForRole(deaconDir, "deacon", runtimeConfig); err != nil {
-		return fmt.Errorf("creating runtime settings: %w", err)
+	// Ensure Claude settings exist (autonomous role needs mail in SessionStart)
+	if err := claude.EnsureSettingsForRole(deaconDir, "deacon"); err != nil {
+		return fmt.Errorf("creating deacon settings: %w", err)
 	}
 
 	// Build startup command first
@@ -438,14 +438,9 @@ func startDeaconSession(t *tmux.Tmux, sessionName, agentOverride string) error {
 
 	// Set environment (non-fatal: session works without these)
 	// Use centralized AgentEnv for consistency across all role startup paths
-	sessionIDEnv := ""
-	if runtimeConfig != nil && runtimeConfig.Session != nil {
-		sessionIDEnv = runtimeConfig.Session.SessionIDEnv
-	}
 	envVars := config.AgentEnv(config.AgentEnvConfig{
-		Role:         "deacon",
-		TownRoot:     townRoot,
-		SessionIDEnv: sessionIDEnv,
+		Role:     "deacon",
+		TownRoot: townRoot,
 	})
 	for k, v := range envVars {
 		_ = t.SetEnvironment(sessionName, k, v)
@@ -462,6 +457,7 @@ func startDeaconSession(t *tmux.Tmux, sessionName, agentOverride string) error {
 	}
 	time.Sleep(constants.ShutdownNotifyDelay)
 
+	runtimeConfig := config.ResolveRoleAgentConfig("deacon", townRoot, "")
 	runtime.WaitForCopilotReady(t, sessionName, runtimeConfig, 30*time.Second)
 	_ = runtime.RunStartupFallback(t, sessionName, "deacon", runtimeConfig)
 

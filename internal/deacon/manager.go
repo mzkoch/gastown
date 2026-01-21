@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/steveyegge/gastown/internal/claude"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 	"github.com/steveyegge/gastown/internal/runtime"
@@ -75,10 +76,9 @@ func (m *Manager) Start(agentOverride string) error {
 		return fmt.Errorf("creating deacon directory: %w", err)
 	}
 
-	// Ensure runtime settings exist
-	rc := config.ResolveRoleAgentConfig("deacon", m.townRoot, "")
-	if err := runtime.EnsureSettingsForRole(deaconDir, "deacon", rc); err != nil {
-		return fmt.Errorf("ensuring runtime settings: %w", err)
+	// Ensure Claude settings exist
+	if err := claude.EnsureSettingsForRole(deaconDir, "deacon"); err != nil {
+		return fmt.Errorf("ensuring Claude settings: %w", err)
 	}
 
 	// Build startup command with initial prompt for autonomous patrol.
@@ -107,14 +107,9 @@ func (m *Manager) Start(agentOverride string) error {
 
 	// Set environment variables (non-fatal: session works without these)
 	// Use centralized AgentEnv for consistency across all role startup paths
-	sessionIDEnv := ""
-	if rc != nil && rc.Session != nil {
-		sessionIDEnv = rc.Session.SessionIDEnv
-	}
 	envVars := config.AgentEnv(config.AgentEnvConfig{
-		Role:         "deacon",
-		TownRoot:     m.townRoot,
-		SessionIDEnv: sessionIDEnv,
+		Role:     "deacon",
+		TownRoot: m.townRoot,
 	})
 	for k, v := range envVars {
 		_ = t.SetEnvironment(sessionID, k, v)
@@ -143,6 +138,7 @@ func (m *Manager) Start(agentOverride string) error {
 		Topic:     "patrol",
 	}) // Non-fatal
 
+	rc := config.ResolveRoleAgentConfig("deacon", m.townRoot, "")
 	runtime.WaitForCopilotReady(t, sessionID, rc, 30*time.Second)
 	runtime.SleepForReadyDelay(rc)
 	_ = runtime.RunStartupFallback(t, sessionID, "deacon", rc)
