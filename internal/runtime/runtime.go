@@ -55,6 +55,22 @@ func SleepForReadyDelay(rc *config.RuntimeConfig) {
 	time.Sleep(time.Duration(rc.Tmux.ReadyDelayMs) * time.Millisecond)
 }
 
+// WaitForCopilotReady waits for Copilot to reach a ready prompt before nudges.
+// Non-copilot runtimes return immediately.
+func WaitForCopilotReady(t *tmux.Tmux, sessionID string, rc *config.RuntimeConfig, timeout time.Duration) {
+	if t == nil || sessionID == "" || !isCopilotRuntime(rc) {
+		return
+	}
+	readyConfig := copilotReadyConfig(rc)
+	if err := t.WaitForRuntimeReady(sessionID, readyConfig, timeout); err != nil {
+		delay := readyConfig.Tmux.ReadyDelayMs
+		if delay < 10000 {
+			delay = 10000 // Copilot needs extra time before nudges land reliably.
+		}
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+	}
+}
+
 // StartupFallbackCommands returns commands that approximate Claude hooks when hooks are unavailable.
 func StartupFallbackCommands(role string, rc *config.RuntimeConfig) []string {
 	if rc == nil {
@@ -82,6 +98,47 @@ func StartupFallbackCommands(role string, rc *config.RuntimeConfig) []string {
 	return []string{command}
 }
 
+func isCopilotRuntime(rc *config.RuntimeConfig) bool {
+	if rc == nil {
+		return false
+	}
+	if strings.EqualFold(rc.Provider, "copilot") {
+		return true
+	}
+	if rc.Command == "" {
+		return false
+	}
+	return strings.EqualFold(filepath.Base(rc.Command), "copilot")
+}
+
+func copilotReadyConfig(rc *config.RuntimeConfig) *config.RuntimeConfig {
+	if rc == nil {
+		return &config.RuntimeConfig{
+			Provider: "copilot",
+			Tmux: &config.RuntimeTmuxConfig{
+				ReadyPromptPrefix: "❯",
+				ReadyDelayMs:      3000,
+			},
+		}
+	}
+
+	ready := &config.RuntimeConfig{
+		Provider: rc.Provider,
+		Command:  rc.Command,
+		Tmux:     &config.RuntimeTmuxConfig{},
+	}
+	if rc.Tmux != nil {
+		*ready.Tmux = *rc.Tmux
+	}
+	if ready.Tmux.ReadyPromptPrefix == "" {
+		ready.Tmux.ReadyPromptPrefix = "❯"
+	}
+	if ready.Tmux.ReadyDelayMs == 0 {
+		ready.Tmux.ReadyDelayMs = 3000
+	}
+	return ready
+}
+
 func hooksAvailable(rc *config.RuntimeConfig) bool {
 	if rc == nil || rc.Hooks == nil {
 		return false
@@ -104,6 +161,7 @@ func hooksAvailable(rc *config.RuntimeConfig) bool {
 
 // RunStartupFallback sends the startup fallback commands via tmux.
 func RunStartupFallback(t *tmux.Tmux, sessionID, role string, rc *config.RuntimeConfig) error {
+	WaitForCopilotReady(t, sessionID, rc, 30*time.Second)
 	commands := StartupFallbackCommands(role, rc)
 	for _, cmd := range commands {
 		if err := t.NudgeSession(sessionID, cmd); err != nil {

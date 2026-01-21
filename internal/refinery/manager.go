@@ -198,6 +198,8 @@ func (m *Manager) Start(foreground bool, agentOverride string) error {
 	// Accept bypass permissions warning dialog if it appears.
 	_ = t.AcceptBypassPermissionsWarning(sessionID)
 
+	runtime.WaitForCopilotReady(t, sessionID, runtimeConfig, 30*time.Second)
+
 	// Wait for runtime to be fully ready
 	runtime.SleepForReadyDelay(runtimeConfig)
 	_ = runtime.RunStartupFallback(t, sessionID, "refinery", runtimeConfig)

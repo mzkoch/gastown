@@ -298,6 +298,7 @@ func (m *SessionManager) Start(polecat string, opts SessionStartOptions) error {
 
 	// Inject startup nudge for predecessor discovery via /resume
 	address := fmt.Sprintf("%s/polecats/%s", m.rig.Name, polecat)
+	runtime.WaitForCopilotReady(m.tmux, sessionID, runtimeConfig, constants.ClaudeStartTimeout)
 	debugSession("StartupNudge", session.StartupNudge(m.tmux, sessionID, session.StartupNudgeConfig{
 		Recipient: address,
 		Sender:    "witness",
