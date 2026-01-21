@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/steveyegge/gastown/internal/beads"
 	"github.com/steveyegge/gastown/internal/config"
+	"github.com/steveyegge/gastown/internal/runtime"
 	"github.com/steveyegge/gastown/internal/session"
 	"github.com/steveyegge/gastown/internal/tmux"
 	"github.com/steveyegge/gastown/internal/workspace"
@@ -976,9 +978,31 @@ func (r *Router) notifyRecipient(msg *Message) error {
 		return nil // No active session, skip notification
 	}
 
+	runtimeConfig := r.resolveRuntimeForNotification(msg.To)
+	runtime.WaitForCopilotReady(r.tmux, sessionID, runtimeConfig, 30*time.Second)
+
 	// Send notification to the agent's conversation history
 	notification := fmt.Sprintf("📬 You have new mail from %s. Subject: %s. Run 'gt mail inbox' to read.", msg.From, msg.Subject)
 	return r.tmux.NudgeSession(sessionID, notification)
+}
+
+func (r *Router) resolveRuntimeForNotification(address string) *config.RuntimeConfig {
+	if r.townRoot == "" {
+		return nil
+	}
+	sessionName := addressToSessionID(address)
+	if sessionName == "" {
+		return nil
+	}
+	identity, err := session.ParseSessionName(sessionName)
+	if err != nil {
+		return nil
+	}
+	rigPath := ""
+	if identity.Rig != "" {
+		rigPath = filepath.Join(r.townRoot, identity.Rig)
+	}
+	return config.ResolveRoleAgentConfig(string(identity.Role), r.townRoot, rigPath)
 }
 
 // addressToSessionID converts a mail address to a tmux session ID.

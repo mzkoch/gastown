@@ -14,6 +14,7 @@ import (
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 	"github.com/steveyegge/gastown/internal/rig"
+	"github.com/steveyegge/gastown/internal/runtime"
 	"github.com/steveyegge/gastown/internal/session"
 	"github.com/steveyegge/gastown/internal/tmux"
 )
@@ -339,7 +340,7 @@ func (d *Daemon) identityToSession(identity string) string {
 // Uses role config if available, falls back to hardcoded defaults.
 func (d *Daemon) restartSession(sessionName, identity string) error {
 	// Get role config for this identity
-	config, parsed, err := d.getRoleConfigForIdentity(identity)
+	roleConfig, parsed, err := d.getRoleConfigForIdentity(identity)
 	if err != nil {
 		return fmt.Errorf("parsing identity: %w", err)
 	}
@@ -354,13 +355,19 @@ func (d *Daemon) restartSession(sessionName, identity string) error {
 	}
 
 	// Determine working directory
-	workDir := d.getWorkDir(config, parsed)
+	workDir := d.getWorkDir(roleConfig, parsed)
 	if workDir == "" {
 		return fmt.Errorf("cannot determine working directory for %s", identity)
 	}
 
+	rigPath := ""
+	if parsed.RigName != "" {
+		rigPath = filepath.Join(d.config.TownRoot, parsed.RigName)
+	}
+	runtimeConfig := config.ResolveRoleAgentConfig(parsed.RoleType, d.config.TownRoot, rigPath)
+
 	// Determine if pre-sync is needed
-	needsPreSync := d.getNeedsPreSync(config, parsed)
+	needsPreSync := d.getNeedsPreSync(roleConfig, parsed)
 
 	// Pre-sync workspace for agents with git worktrees
 	if needsPreSync {
@@ -375,13 +382,13 @@ func (d *Daemon) restartSession(sessionName, identity string) error {
 	}
 
 	// Set environment variables
-	d.setSessionEnvironment(sessionName, config, parsed)
+	d.setSessionEnvironment(sessionName, roleConfig, parsed)
 
 	// Apply theme (non-fatal: theming failure doesn't affect operation)
 	d.applySessionTheme(sessionName, parsed)
 
 	// Get and send startup command
-	startCmd := d.getStartCommand(config, parsed)
+	startCmd := d.getStartCommand(roleConfig, parsed)
 	if err := d.tmux.SendKeys(sessionName, startCmd); err != nil {
 		return fmt.Errorf("sending startup command: %w", err)
 	}
@@ -395,6 +402,7 @@ func (d *Daemon) restartSession(sessionName, identity string) error {
 	time.Sleep(constants.ShutdownNotifyDelay)
 
 	// GUPP: Gas Town Universal Propulsion Principle
+	runtime.WaitForCopilotReady(d.tmux, sessionName, runtimeConfig, constants.ClaudeStartTimeout)
 	// Send startup nudge for predecessor discovery via /resume
 	recipient := identityToBDActor(identity)
 	_ = session.StartupNudge(d.tmux, sessionName, session.StartupNudgeConfig{

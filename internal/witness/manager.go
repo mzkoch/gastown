@@ -196,6 +196,7 @@ func (m *Manager) Start(foreground bool, agentOverride string, envOverrides []st
 	_ = t.AcceptBypassPermissionsWarning(sessionID)
 
 	time.Sleep(constants.ShutdownNotifyDelay)
+	runtime.WaitForCopilotReady(t, sessionID, rc, 30*time.Second)
 
 	// Inject startup nudge for predecessor discovery via /resume
 	address := fmt.Sprintf("%s/witness", m.rig.Name)
