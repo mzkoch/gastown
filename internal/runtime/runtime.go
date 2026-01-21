@@ -3,6 +3,7 @@ package runtime
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -59,8 +60,16 @@ func StartupFallbackCommands(role string, rc *config.RuntimeConfig) []string {
 	if rc == nil {
 		rc = config.DefaultRuntimeConfig()
 	}
-	if rc.Hooks != nil && rc.Hooks.Provider != "" && rc.Hooks.Provider != "none" {
-		return nil
+	if rc.Hooks != nil {
+		switch strings.ToLower(rc.Hooks.Provider) {
+		case "claude", "opencode":
+			return nil
+		case "copilot":
+			if !hooksAvailable(rc) {
+				break
+			}
+			return nil
+		}
 	}
 
 	role = strings.ToLower(role)
@@ -71,6 +80,26 @@ func StartupFallbackCommands(role string, rc *config.RuntimeConfig) []string {
 	command += " && gt nudge deacon session-started"
 
 	return []string{command}
+}
+
+func hooksAvailable(rc *config.RuntimeConfig) bool {
+	if rc == nil || rc.Hooks == nil {
+		return false
+	}
+	if rc.Hooks.Dir == "" || rc.Hooks.SettingsFile == "" {
+		return false
+	}
+	hooksPath := filepath.Join(rc.Hooks.Dir, rc.Hooks.SettingsFile)
+	if filepath.IsAbs(hooksPath) {
+		_, err := os.Stat(hooksPath)
+		return err == nil
+	}
+	if home := os.Getenv("HOME"); home != "" {
+		if _, err := os.Stat(filepath.Join(home, hooksPath)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // RunStartupFallback sends the startup fallback commands via tmux.
