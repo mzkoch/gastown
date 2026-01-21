@@ -222,3 +222,12 @@ func TestDefaultAgentOverrideSkipsExportPrefix(t *testing.T) {
 		t.Fatalf("defaultAgentOverride = %q, want %q", got, "copilot")
 	}
 }
+
+func TestDefaultAgentOverrideSkipsExecEnv(t *testing.T) {
+	t.Parallel()
+
+	got := defaultAgentOverride("exec env GT_ROLE=polecat GT_ROOT=/town copilot --yolo")
+	if got != "copilot" {
+		t.Fatalf("defaultAgentOverride = %q, want %q", got, "copilot")
+	}
+}

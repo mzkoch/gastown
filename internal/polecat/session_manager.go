@@ -42,6 +42,26 @@ func defaultAgentOverride(command string) string {
 	if len(fields) == 0 {
 		return ""
 	}
+	if fields[0] == "exec" {
+		fields = fields[1:]
+	}
+	if len(fields) > 0 && fields[0] == "env" {
+		fields = fields[1:]
+		for len(fields) > 0 {
+			if fields[0] == "--" {
+				fields = fields[1:]
+				break
+			}
+			if strings.HasPrefix(fields[0], "-") || strings.Contains(fields[0], "=") {
+				fields = fields[1:]
+				continue
+			}
+			break
+		}
+	}
+	if len(fields) == 0 {
+		return ""
+	}
 	return filepath.Base(fields[0])
 }
 
