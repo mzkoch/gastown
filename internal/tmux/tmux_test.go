@@ -5,6 +5,9 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/steveyegge/gastown/internal/config"
 )
 
 func hasTmux() bool {
@@ -156,6 +159,59 @@ func TestSendKeysAndCapture(t *testing.T) {
 	if !strings.Contains(output, "echo HELLO_TEST_MARKER") {
 		t.Logf("captured output: %s", output)
 		// Don't fail, just note - timing issues possible
+	}
+}
+
+func TestEarlyNudgeDeliveredAfterRuntimeReady(t *testing.T) {
+	if !hasTmux() {
+		t.Skip("tmux not installed")
+	}
+
+	tm := NewTmux()
+	sessionName := "gt-test-ready-" + t.Name()
+
+	_ = tm.KillSession(sessionName)
+
+	cmd := `bash -lc 'sleep 1; printf "READY>\n"; while IFS= read -r line; do printf "RECV:%s\n" "$line"; done'`
+	if err := tm.NewSessionWithCommand(sessionName, "", cmd); err != nil {
+		t.Fatalf("NewSessionWithCommand: %v", err)
+	}
+	defer func() { _ = tm.KillSession(sessionName) }()
+
+	if err := tm.NudgeSession(sessionName, "EARLY_MESSAGE"); err != nil {
+		t.Fatalf("NudgeSession: %v", err)
+	}
+
+	rc := &config.RuntimeConfig{
+		Tmux: &config.RuntimeTmuxConfig{
+			ReadyPromptPrefix: "READY>",
+		},
+	}
+	if err := tm.WaitForRuntimeReady(sessionName, rc, 3*time.Second); err != nil {
+		t.Fatalf("WaitForRuntimeReady: %v", err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		output, err := tm.CapturePane(sessionName, 50)
+		if err != nil {
+			t.Fatalf("CapturePane: %v", err)
+		}
+		if strings.Contains(output, "RECV:EARLY_MESSAGE") {
+			readyIndex := strings.Index(output, "READY>")
+			recvIndex := strings.Index(output, "RECV:EARLY_MESSAGE")
+			if readyIndex == -1 {
+				t.Fatalf("expected READY> prompt before delivery; output:\n%s", output)
+			}
+			if recvIndex < readyIndex {
+				t.Fatalf("expected early message after ready prompt; output:\n%s", output)
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("expected early message delivery after ready; output:\n%s", output)
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
