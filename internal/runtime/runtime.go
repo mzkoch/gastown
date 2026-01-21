@@ -138,7 +138,6 @@ func copilotReadyConfig(rc *config.RuntimeConfig) *config.RuntimeConfig {
 	}
 	return ready
 }
-
 func hooksAvailable(rc *config.RuntimeConfig) bool {
 	if rc == nil || rc.Hooks == nil {
 		return false
