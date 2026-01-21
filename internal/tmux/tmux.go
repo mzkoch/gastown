@@ -573,6 +573,36 @@ func getSessionNudgeLock(session string) *sync.Mutex {
 	return actual.(*sync.Mutex)
 }
 
+// isCopilotTarget returns true if the target pane is running Copilot CLI.
+// Copilot treats Escape as cancel, so we skip it to avoid aborting work.
+func (t *Tmux) isCopilotTarget(target string) bool {
+	startCmd, err := t.run("list-panes", "-t", target, "-F", "#{pane_start_command}")
+	if err == nil && strings.Contains(startCmd, "copilot") {
+		return true
+	}
+
+	cmd, err := t.run("list-panes", "-t", target, "-F", "#{pane_current_command}")
+	if err != nil {
+		return false
+	}
+	cmd = strings.TrimSpace(cmd)
+	if cmd == "copilot" {
+		return true
+	}
+	for _, shell := range constants.SupportedShells {
+		if cmd == shell {
+			pid, err := t.run("list-panes", "-t", target, "-F", "#{pane_pid}")
+			if err != nil {
+				return false
+			}
+			pid = strings.TrimSpace(pid)
+			return pid != "" && hasCopilotChild(pid)
+		}
+	}
+
+	return false
+}
+
 // NudgeSession sends a message to a Claude Code session reliably.
 // This is the canonical way to send messages to Claude sessions.
 // Uses: literal mode + 500ms debounce + ESC (for vim mode) + separate Enter.
@@ -596,10 +626,12 @@ func (t *Tmux) NudgeSession(session, message string) error {
 	// 2. Wait 500ms for paste to complete (tested, required)
 	time.Sleep(500 * time.Millisecond)
 
-	// 3. Send Escape to exit vim INSERT mode if enabled (harmless in normal mode)
-	// See: https://github.com/anthropics/gastown/issues/307
-	_, _ = t.run("send-keys", "-t", session, "Escape")
-	time.Sleep(100 * time.Millisecond)
+	if !t.isCopilotTarget(session) {
+		// 3. Send Escape to exit vim INSERT mode if enabled (harmless in normal mode)
+		// See: https://github.com/anthropics/gastown/issues/307
+		_, _ = t.run("send-keys", "-t", session, "Escape")
+		time.Sleep(100 * time.Millisecond)
+	}
 
 	// 4. Send Enter with retry (critical for message submission)
 	var lastErr error
@@ -633,10 +665,12 @@ func (t *Tmux) NudgePane(pane, message string) error {
 	// 2. Wait 500ms for paste to complete (tested, required)
 	time.Sleep(500 * time.Millisecond)
 
-	// 3. Send Escape to exit vim INSERT mode if enabled (harmless in normal mode)
-	// See: https://github.com/anthropics/gastown/issues/307
-	_, _ = t.run("send-keys", "-t", pane, "Escape")
-	time.Sleep(100 * time.Millisecond)
+	if !t.isCopilotTarget(pane) {
+		// 3. Send Escape to exit vim INSERT mode if enabled (harmless in normal mode)
+		// See: https://github.com/anthropics/gastown/issues/307
+		_, _ = t.run("send-keys", "-t", pane, "Escape")
+		time.Sleep(100 * time.Millisecond)
+	}
 
 	// 4. Send Enter with retry (critical for message submission)
 	var lastErr error

@@ -10,6 +10,7 @@ import (
 	"github.com/steveyegge/gastown/internal/claude"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
+	"github.com/steveyegge/gastown/internal/runtime"
 	"github.com/steveyegge/gastown/internal/session"
 	"github.com/steveyegge/gastown/internal/tmux"
 )
@@ -137,16 +138,22 @@ func (m *Manager) Start(agentOverride string) error {
 		Topic:     "patrol",
 	}) // Non-fatal
 
+	rc := config.ResolveRoleAgentConfig("deacon", m.townRoot, "")
+	runtime.SleepForReadyDelay(rc)
+	_ = runtime.RunStartupFallback(t, sessionID, "deacon", rc)
+
 	// Wait for runtime to be ready (prompt visible) before sending propulsion nudge.
 	// This prevents the Escape key in NudgeSession from canceling "Thinking" state.
 	// The startup nudge above triggers /resume beacon processing which puts Claude in
 	// "Thinking" state. We must wait for that to complete before sending the propulsion nudge.
 	// See: https://github.com/steveyegge/gastown/issues/hq-cv-5ktuq
-	rc := config.LoadRuntimeConfig(m.townRoot)
 	if err := t.WaitForRuntimeReady(sessionID, rc, 30*time.Second); err != nil {
 		// Non-fatal: if prompt detection fails, use longer fixed delay (10s minimum)
 		// to ensure beacon processing completes before propulsion nudge.
-		delay := rc.Tmux.ReadyDelayMs
+		delay := 10000
+		if rc != nil && rc.Tmux != nil && rc.Tmux.ReadyDelayMs > 0 {
+			delay = rc.Tmux.ReadyDelayMs
+		}
 		if delay < 10000 {
 			delay = 10000 // Override copilot's 3s default - too short for beacon processing
 		}

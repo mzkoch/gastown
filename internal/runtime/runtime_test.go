@@ -177,6 +177,22 @@ func TestStartupFallbackCommands_WithHooks(t *testing.T) {
 	}
 }
 
+func TestStartupFallbackCommands_CopilotWithoutHooks(t *testing.T) {
+	rc := &config.RuntimeConfig{
+		Provider: "copilot",
+		Hooks: &config.RuntimeHooksConfig{
+			Provider:     "copilot",
+			Dir:          ".copilot",
+			SettingsFile: "missing.json",
+		},
+	}
+
+	commands := StartupFallbackCommands("refinery", rc)
+	if commands == nil || len(commands) == 0 {
+		t.Error("StartupFallbackCommands() should return commands when copilot hooks are missing")
+	}
+}
+
 func TestStartupFallbackCommands_NilConfig(t *testing.T) {
 	// Nil config defaults to claude provider, which has hooks
 	// So it returns nil (no fallback commands needed)

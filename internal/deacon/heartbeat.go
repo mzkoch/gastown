@@ -90,6 +90,11 @@ func readHeartbeatFallback(data []byte, hbFile string) *Heartbeat {
 	var fallback heartbeatFallback
 	if err := json.Unmarshal(data, &fallback); err == nil && fallback.LastPatrol != "" {
 		if ts, err := time.Parse(time.RFC3339Nano, fallback.LastPatrol); err == nil {
+			// Fall back to file modtime if last_patrol is stale enough to trigger restarts.
+			// This prevents state.json-style payloads from keeping heartbeats "fresh".
+			if info, statErr := os.Stat(hbFile); statErr == nil && time.Since(ts) > 15*time.Minute {
+				return &Heartbeat{Timestamp: info.ModTime()}
+			}
 			return &Heartbeat{Timestamp: ts}
 		}
 	}
