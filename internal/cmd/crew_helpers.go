@@ -175,7 +175,7 @@ func execAgent(cfg *config.RuntimeConfig, prompt string) error {
 // If prompt is provided, it's passed according to the runtime's prompt mode.
 func execRuntime(prompt, rigPath, configDir string) error {
 	runtimeConfig := config.LoadRuntimeConfig(rigPath)
-	args := runtimeConfig.BuildArgsWithPrompt(prompt)
+	args := runtimeConfig.BuildNonInteractiveArgsWithPrompt(prompt)
 	if len(args) == 0 {
 		return fmt.Errorf("runtime command not configured")
 	}

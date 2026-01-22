@@ -390,6 +390,49 @@ func (rc *RuntimeConfig) BuildArgsWithPrompt(prompt string) []string {
 	return args
 }
 
+// BuildNonInteractiveArgsWithPrompt returns the runtime command and args
+// suitable for exec in non-interactive mode, honoring non_interactive config.
+func (rc *RuntimeConfig) BuildNonInteractiveArgsWithPrompt(prompt string) []string {
+	resolved := normalizeRuntimeConfig(rc)
+	args := append([]string{resolved.Command}, resolved.Args...)
+
+	info := GetAgentPresetByName(resolved.Provider)
+	if info == nil {
+		info = GetAgentPresetByName(resolved.Command)
+	}
+
+	if info == nil || info.NonInteractive == nil {
+		return resolved.BuildArgsWithPrompt(prompt)
+	}
+
+	nonInteractive := info.NonInteractive
+	if nonInteractive.Subcommand != "" {
+		args = append(args, nonInteractive.Subcommand)
+	}
+	if nonInteractive.OutputFlag != "" {
+		args = append(args, nonInteractive.OutputFlag)
+	}
+
+	p := prompt
+	if p == "" {
+		p = resolved.InitialPrompt
+	}
+	if p == "" {
+		return args
+	}
+
+	if nonInteractive.PromptFlag != "" {
+		args = append(args, nonInteractive.PromptFlag, p)
+		return args
+	}
+
+	if resolved.PromptMode != "none" {
+		args = append(args, p)
+	}
+
+	return args
+}
+
 func normalizeRuntimeConfig(rc *RuntimeConfig) *RuntimeConfig {
 	if rc == nil {
 		rc = &RuntimeConfig{}

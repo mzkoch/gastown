@@ -964,6 +964,54 @@ func TestRuntimeConfigBuildCommandWithPrompt(t *testing.T) {
 	}
 }
 
+func TestRuntimeConfigBuildNonInteractiveArgsWithPrompt(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		rc   *RuntimeConfig
+		want []string
+	}{
+		{
+			name: "copilot prompt flag",
+			rc:   RuntimeConfigFromPreset(AgentCopilot),
+			want: []string{"copilot", "--yolo", "-p", "hello"},
+		},
+		{
+			name: "gemini prompt flag with output",
+			rc:   RuntimeConfigFromPreset(AgentGemini),
+			want: []string{"gemini", "--approval-mode", "yolo", "--output-format json", "-p", "hello"},
+		},
+		{
+			name: "cursor prompt flag with output",
+			rc:   RuntimeConfigFromPreset(AgentCursor),
+			want: []string{"cursor-agent", "-f", "--output-format json", "-p", "hello"},
+		},
+		{
+			name: "codex subcommand output",
+			rc:   RuntimeConfigFromPreset(AgentCodex),
+			want: []string{"codex", "--yolo", "exec", "--json"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prompt := "hello"
+			if tt.rc.Provider == string(AgentCodex) {
+				prompt = ""
+			}
+			got := tt.rc.BuildNonInteractiveArgsWithPrompt(prompt)
+			if len(got) != len(tt.want) {
+				t.Fatalf("BuildNonInteractiveArgsWithPrompt() = %q, want %q", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Fatalf("BuildNonInteractiveArgsWithPrompt() = %q, want %q", got, tt.want)
+				}
+			}
+		})
+	}
+}
+
 func TestBuildAgentStartupCommand(t *testing.T) {
 	// BuildAgentStartupCommand auto-detects town root from cwd when rigPath is empty.
 	// Use a temp directory to ensure we exercise the fallback default config path.
