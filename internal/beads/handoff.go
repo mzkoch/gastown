@@ -165,6 +165,7 @@ func (b *Beads) AttachMolecule(pinnedBeadID, moleculeID string) (*Issue, error) 
 			return nil, fmt.Errorf("issue %s is not pinned, hooked, or open polecat (status: %s)", pinnedBeadID, issue.Status)
 		}
 	}
+	}
 
 	// Build attachment fields with current timestamp
 	fields := &AttachmentFields{
