@@ -24,6 +24,11 @@ type hooksConfig struct {
 // EnsureHooksForRole ensures a hooks.json file exists for Copilot CLI.
 // It merges required hooks into any existing file without overwriting user entries.
 func EnsureHooksForRole(workDir, role, hooksDir, hooksFile string) error {
+	return EnsureHooksForRoleAt(workDir, role, hooksDir, hooksFile, "")
+}
+
+// EnsureHooksForRoleAt ensures hooks are written using configDir when provided.
+func EnsureHooksForRoleAt(workDir, role, hooksDir, hooksFile, configDir string) error {
 	if hooksFile == "" {
 		return errors.New("hooks file name is required")
 	}
@@ -32,6 +37,9 @@ func EnsureHooksForRole(workDir, role, hooksDir, hooksFile string) error {
 	}
 
 	hooksPath := filepath.Join(workDir, hooksDir, hooksFile)
+	if configDir != "" {
+		hooksPath = filepath.Join(configDir, hooksFile)
+	}
 	existing, err := readHooksConfig(hooksPath)
 	if err != nil {
 		return err

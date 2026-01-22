@@ -14,6 +14,13 @@ import (
 	"github.com/steveyegge/gastown/internal/tmux"
 )
 
+func runtimeConfigDirEnv(rc *config.RuntimeConfig) string {
+	if rc != nil && rc.Session != nil && rc.Session.ConfigDirEnv != "" {
+		return rc.Session.ConfigDirEnv
+	}
+	return "CLAUDE_CONFIG_DIR"
+}
+
 // Common errors
 var (
 	ErrNotRunning     = errors.New("mayor not running")
@@ -99,6 +106,7 @@ func (m *Manager) Start(agentOverride string) error {
 		TownRoot:      m.townRoot,
 		WorkDir:       m.townRoot,
 		AgentOverride: agentOverride,
+		ConfigDir:     os.Getenv(runtimeConfigDirEnv(rc)),
 	}); err != nil {
 		return err
 	}

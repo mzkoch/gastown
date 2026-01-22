@@ -34,6 +34,7 @@ func TestCopilotTrustE2E_ConfigCreation(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  witnessDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("EnsureCopilotTrustedFolder failed: %v", err)
 	}
@@ -102,6 +103,7 @@ func TestCopilotTrustE2E_NoDuplicates(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  witnessDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}
 
 	// Call multiple times
@@ -239,6 +241,7 @@ func TestCopilotTrustE2E_AllRoles(t *testing.T) {
 				TownRoot: townRoot,
 				RigPath:  rigPath,
 				WorkDir:  workDir,
+				ConfigDir: filepath.Join(xdgHome, ".copilot"),
 			}); err != nil {
 				t.Fatalf("EnsureCopilotTrustedFolder failed: %v", err)
 			}
@@ -289,6 +292,7 @@ func TestCopilotTrustE2E_PolecatParentTrust(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  polecat1WorkDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("First trust failed: %v", err)
 	}
@@ -299,6 +303,7 @@ func TestCopilotTrustE2E_PolecatParentTrust(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  polecat2WorkDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("Second trust failed: %v", err)
 	}
@@ -368,6 +373,7 @@ func TestCopilotTrustE2E_NonCopilotAgent(t *testing.T) {
 				TownRoot: townRoot,
 				RigPath:  rigPath,
 				WorkDir:  witnessDir,
+				ConfigDir: filepath.Join(xdgHome, ".copilot"),
 			}); err != nil {
 				t.Fatalf("EnsureCopilotTrustedFolder failed: %v", err)
 			}
@@ -406,6 +412,7 @@ func TestCopilotTrustE2E_AgentOverride(t *testing.T) {
 			RigPath:       rigPath,
 			WorkDir:       witnessDir,
 			AgentOverride: "copilot",
+			ConfigDir:     filepath.Join(xdgHome, ".copilot"),
 		}); err != nil {
 			t.Fatalf("EnsureCopilotTrustedFolder failed: %v", err)
 		}
@@ -436,6 +443,7 @@ func TestCopilotTrustE2E_AgentOverride(t *testing.T) {
 			RigPath:       rigPath,
 			WorkDir:       witnessDir,
 			AgentOverride: "claude",
+			ConfigDir:     filepath.Join(xdgHome, ".copilot"),
 		}); err != nil {
 			t.Fatalf("EnsureCopilotTrustedFolder failed: %v", err)
 		}
@@ -464,6 +472,7 @@ func TestCopilotTrustE2E_EmptyWorkDir(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  "", // Empty!
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("EnsureCopilotTrustedFolder failed with empty WorkDir: %v", err)
 	}

@@ -169,13 +169,14 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 			sessionIDEnv = runtimeConfig.Session.SessionIDEnv
 		}
 		envVars := config.AgentEnv(config.AgentEnvConfig{
-			Role:             "crew",
-			Rig:              r.Name,
-			AgentName:        name,
-			TownRoot:         townRoot,
-			RuntimeConfigDir: claudeConfigDir,
-			SessionIDEnv:     sessionIDEnv,
-			BeadsNoDaemon:    true,
+			Role:                "crew",
+			Rig:                 r.Name,
+			AgentName:           name,
+			TownRoot:            townRoot,
+			RuntimeConfigDir:    claudeConfigDir,
+			RuntimeConfigDirEnv: configDirEnvFor(runtimeConfig),
+			SessionIDEnv:        sessionIDEnv,
+			BeadsNoDaemon:       true,
 		})
 		for k, v := range envVars {
 			_ = t.SetEnvironment(sessionID, k, v)
@@ -220,12 +221,16 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 			RigPath:       r.Path,
 			WorkDir:       worker.ClonePath,
 			AgentOverride: crewAgentOverride,
+			ConfigDir:     claudeConfigDir,
 		}); err != nil {
 			return err
 		}
 		// Prepend config dir env if available
 		if runtimeConfig.Session != nil && runtimeConfig.Session.ConfigDirEnv != "" && claudeConfigDir != "" {
-			startupCmd = config.PrependEnv(startupCmd, map[string]string{runtimeConfig.Session.ConfigDirEnv: claudeConfigDir})
+			configDirEnv := runtimeConfig.Session.ConfigDirEnv
+			os.Setenv(configDirEnv, claudeConfigDir)
+			defer os.Unsetenv(configDirEnv)
+			startupCmd = config.PrependEnv(startupCmd, map[string]string{configDirEnv: claudeConfigDir})
 		}
 		// Note: Don't call KillPaneProcesses here - this is a NEW session with just
 		// a fresh shell. Killing it would destroy the pane before we can respawn.
@@ -276,12 +281,16 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 				RigPath:       r.Path,
 				WorkDir:       worker.ClonePath,
 				AgentOverride: crewAgentOverride,
+				ConfigDir:     claudeConfigDir,
 			}); err != nil {
 				return err
 			}
 			// Prepend config dir env if available
 			if runtimeConfig.Session != nil && runtimeConfig.Session.ConfigDirEnv != "" && claudeConfigDir != "" {
-				startupCmd = config.PrependEnv(startupCmd, map[string]string{runtimeConfig.Session.ConfigDirEnv: claudeConfigDir})
+				configDirEnv := runtimeConfig.Session.ConfigDirEnv
+				os.Setenv(configDirEnv, claudeConfigDir)
+				defer os.Unsetenv(configDirEnv)
+				startupCmd = config.PrependEnv(startupCmd, map[string]string{configDirEnv: claudeConfigDir})
 			}
 			// Kill all processes in the pane before respawning to prevent orphan leaks
 			// RespawnPane's -k flag only sends SIGHUP which Claude/Node may ignore
@@ -355,4 +364,11 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 		fmt.Printf("[DEBUG] calling attachToTmuxSession(%q)\n", sessionID)
 	}
 	return attachToTmuxSession(sessionID)
+}
+
+func configDirEnvFor(rc *config.RuntimeConfig) string {
+	if rc != nil && rc.Session != nil && rc.Session.ConfigDirEnv != "" {
+		return rc.Session.ConfigDirEnv
+	}
+	return "CLAUDE_CONFIG_DIR"
 }

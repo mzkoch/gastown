@@ -28,6 +28,9 @@ type AgentEnvConfig struct {
 	// RuntimeConfigDir is the optional CLAUDE_CONFIG_DIR path
 	RuntimeConfigDir string
 
+	// RuntimeConfigDirEnv overrides which env var holds the config dir (defaults to CLAUDE_CONFIG_DIR).
+	RuntimeConfigDirEnv string
+
 	// SessionIDEnv is the environment variable name that holds the session ID.
 	// Sets GT_SESSION_ID_ENV so the runtime knows where to find the session ID.
 	SessionIDEnv string
@@ -98,7 +101,11 @@ func AgentEnv(cfg AgentEnvConfig) map[string]string {
 
 	// Add optional runtime config directory
 	if cfg.RuntimeConfigDir != "" {
-		env["CLAUDE_CONFIG_DIR"] = cfg.RuntimeConfigDir
+		configEnv := cfg.RuntimeConfigDirEnv
+		if configEnv == "" {
+			configEnv = "CLAUDE_CONFIG_DIR"
+		}
+		env[configEnv] = cfg.RuntimeConfigDir
 	}
 
 	// Add session ID env var name if provided

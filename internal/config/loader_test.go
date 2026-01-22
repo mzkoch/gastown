@@ -839,7 +839,6 @@ func TestRuntimeConfigDefaults(t *testing.T) {
 }
 
 func TestRuntimeConfigBuildCommand(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		name         string
 		rc           *RuntimeConfig
@@ -876,10 +875,17 @@ func TestRuntimeConfigBuildCommand(t *testing.T) {
 			wantContains: []string{"--dangerously-skip-permissions"},
 			isClaudeCmd:  true,
 		},
-	}
+		{
+			name:         "copilot config dir env adds flag",
+			rc:           RuntimeConfigFromPreset(AgentCopilot),
+			wantContains: []string{"--yolo", "--config-dir", "/tmp/copilot-config"},
+			isClaudeCmd:  false,
+		},
+ }
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("COPILOT_CONFIG_HOME", "/tmp/copilot-config")
 			got := tt.rc.BuildCommand()
 			// Check command contains expected parts
 			for _, part := range tt.wantContains {
@@ -899,7 +905,6 @@ func TestRuntimeConfigBuildCommand(t *testing.T) {
 }
 
 func TestRuntimeConfigBuildCommandWithPrompt(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		name         string
 		rc           *RuntimeConfig
@@ -946,6 +951,7 @@ func TestRuntimeConfigBuildCommandWithPrompt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("COPILOT_CONFIG_HOME", "/tmp/copilot-config")
 			got := tt.rc.BuildCommandWithPrompt(tt.prompt)
 			// Check command contains expected parts
 			for _, part := range tt.wantContains {
@@ -965,7 +971,6 @@ func TestRuntimeConfigBuildCommandWithPrompt(t *testing.T) {
 }
 
 func TestRuntimeConfigBuildNonInteractiveArgsWithPrompt(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		name string
 		rc   *RuntimeConfig
@@ -974,7 +979,7 @@ func TestRuntimeConfigBuildNonInteractiveArgsWithPrompt(t *testing.T) {
 		{
 			name: "copilot prompt flag",
 			rc:   RuntimeConfigFromPreset(AgentCopilot),
-			want: []string{"copilot", "--yolo", "-p", "hello"},
+			want: []string{"copilot", "--yolo", "--config-dir", "/tmp/copilot-config", "-p", "hello"},
 		},
 		{
 			name: "gemini prompt flag with output",
@@ -995,6 +1000,7 @@ func TestRuntimeConfigBuildNonInteractiveArgsWithPrompt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("COPILOT_CONFIG_HOME", "/tmp/copilot-config")
 			prompt := "hello"
 			if tt.rc.Provider == string(AgentCodex) {
 				prompt = ""

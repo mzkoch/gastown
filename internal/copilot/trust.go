@@ -15,9 +15,30 @@ const (
 	configFileName = "config.json"
 )
 
+// ConfigDirFromHome returns the Copilot config directory, optionally rooted at configHome.
+func ConfigDirFromHome(configHome string) (string, error) {
+	if configHome == "" {
+		configHome = os.Getenv("XDG_CONFIG_HOME")
+	}
+	if configHome != "" {
+		return filepath.Join(configHome, configDirName), nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("finding home dir: %w", err)
+	}
+	return filepath.Join(home, configDirName), nil
+}
+
 // EnsureTrustedFolder adds the path to Copilot's trusted_folders if needed.
 // Returns true if the config was updated.
 func EnsureTrustedFolder(path string) (bool, error) {
+	return EnsureTrustedFolderAt(path, "")
+}
+
+// EnsureTrustedFolderAt adds the path to Copilot's trusted_folders using configDir.
+// Returns true if the config was updated.
+func EnsureTrustedFolderAt(path, configDir string) (bool, error) {
 	if path == "" {
 		return false, nil
 	}
@@ -28,9 +49,12 @@ func EnsureTrustedFolder(path string) (bool, error) {
 	}
 	absPath = filepath.Clean(absPath)
 
-	configDir, err := copilotConfigDir()
-	if err != nil {
-		return false, err
+	if configDir == "" {
+		var err error
+		configDir, err = copilotConfigDir()
+		if err != nil {
+			return false, err
+		}
 	}
 	configPath := filepath.Join(configDir, configFileName)
 
@@ -61,14 +85,7 @@ func EnsureTrustedFolder(path string) (bool, error) {
 }
 
 func copilotConfigDir() (string, error) {
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, configDirName), nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("finding home dir: %w", err)
-	}
-	return filepath.Join(home, configDirName), nil
+	return ConfigDirFromHome("")
 }
 
 func readConfig(path string) (map[string]interface{}, error) {

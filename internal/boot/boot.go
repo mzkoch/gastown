@@ -15,6 +15,13 @@ import (
 	"github.com/steveyegge/gastown/internal/tmux"
 )
 
+func runtimeConfigDirEnv(rc *config.RuntimeConfig) string {
+	if rc != nil && rc.Session != nil && rc.Session.ConfigDirEnv != "" {
+		return rc.Session.ConfigDirEnv
+	}
+	return "CLAUDE_CONFIG_DIR"
+}
+
 // SessionName is the tmux session name for Boot.
 // Note: We use "gt-boot" instead of "hq-deacon-boot" to avoid tmux prefix
 // matching collisions. Tmux matches session names by prefix, so "hq-deacon-boot"
@@ -190,6 +197,7 @@ func (b *Boot) spawnTmux(agentOverride string) error {
 		TownRoot:      b.townRoot,
 		WorkDir:       b.bootDir,
 		AgentOverride: agentOverride,
+		ConfigDir:     os.Getenv(runtimeConfigDirEnv(rc)),
 	}); err != nil {
 		return err
 	}

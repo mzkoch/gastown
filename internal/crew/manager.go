@@ -20,6 +20,13 @@ import (
 	"github.com/steveyegge/gastown/internal/util"
 )
 
+func configDirEnvFor(rc *config.RuntimeConfig) string {
+	if rc != nil && rc.Session != nil && rc.Session.ConfigDirEnv != "" {
+		return rc.Session.ConfigDirEnv
+	}
+	return "CLAUDE_CONFIG_DIR"
+}
+
 // Common errors
 var (
 	ErrCrewExists      = errors.New("crew worker already exists")
@@ -571,6 +578,7 @@ func (m *Manager) Start(name string, opts StartOptions) error {
 		RigPath:       m.rig.Path,
 		WorkDir:       worker.ClonePath,
 		AgentOverride: opts.AgentOverride,
+		ConfigDir:     opts.ClaudeConfigDir,
 	}); err != nil {
 		return err
 	}
@@ -588,13 +596,14 @@ func (m *Manager) Start(name string, opts StartOptions) error {
 		sessionIDEnv = runtimeConfig.Session.SessionIDEnv
 	}
 	envVars := config.AgentEnv(config.AgentEnvConfig{
-		Role:             "crew",
-		Rig:              m.rig.Name,
-		AgentName:        name,
-		TownRoot:         townRoot,
-		RuntimeConfigDir: opts.ClaudeConfigDir,
-		SessionIDEnv:     sessionIDEnv,
-		BeadsNoDaemon:    true,
+		Role:                "crew",
+		Rig:                 m.rig.Name,
+		AgentName:           name,
+		TownRoot:            townRoot,
+		RuntimeConfigDir:    opts.ClaudeConfigDir,
+		RuntimeConfigDirEnv: configDirEnvFor(runtimeConfig),
+		SessionIDEnv:        sessionIDEnv,
+		BeadsNoDaemon:       true,
 	})
 	for k, v := range envVars {
 		_ = t.SetEnvironment(sessionID, k, v)

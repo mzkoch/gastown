@@ -31,9 +31,10 @@ func TestEnsureCopilotTrustedFolder_UpdatesWhenCopilot(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", xdgHome)
 
 	if err := EnsureCopilotTrustedFolder(CopilotTrustConfig{
-		TownRoot: townRoot,
-		RigPath:  rigPath,
-		WorkDir:  workDir,
+		TownRoot:  townRoot,
+		RigPath:   rigPath,
+		WorkDir:   workDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("EnsureCopilotTrustedFolder: %v", err)
 	}
@@ -65,9 +66,10 @@ func TestEnsureCopilotTrustedFolder_SkipsNonCopilot(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", xdgHome)
 
 	if err := EnsureCopilotTrustedFolder(CopilotTrustConfig{
-		TownRoot: townRoot,
-		RigPath:  rigPath,
-		WorkDir:  workDir,
+		TownRoot:  townRoot,
+		RigPath:   rigPath,
+		WorkDir:   workDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("EnsureCopilotTrustedFolder: %v", err)
 	}
@@ -96,10 +98,11 @@ func TestEnsureCopilotTrustedFolder_PolecatTrustsParent(t *testing.T) {
 
 	// Call with a polecat working directory
 	if err := EnsureCopilotTrustedFolder(CopilotTrustConfig{
-		Role:     "polecat",
-		TownRoot: townRoot,
-		RigPath:  rigPath,
-		WorkDir:  polecatWorkDir,
+		Role:      "polecat",
+		TownRoot:  townRoot,
+		RigPath:   rigPath,
+		WorkDir:   polecatWorkDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("EnsureCopilotTrustedFolder: %v", err)
 	}

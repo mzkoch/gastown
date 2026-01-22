@@ -1084,6 +1084,8 @@ func fillRuntimeDefaults(rc *RuntimeConfig) *RuntimeConfig {
 		Command:       rc.Command,
 		Args:          rc.Args,
 		InitialPrompt: rc.InitialPrompt,
+		Provider:      rc.Provider,
+		Session:       rc.Session,
 	}
 	// Copy Env map to avoid mutation and preserve agent-specific env vars
 	if len(rc.Env) > 0 {
@@ -1092,11 +1094,27 @@ func fillRuntimeDefaults(rc *RuntimeConfig) *RuntimeConfig {
 			result.Env[k] = v
 		}
 	}
+	if rc.Session != nil {
+		sessionCopy := *rc.Session
+		result.Session = &sessionCopy
+	}
 	if result.Command == "" {
 		result.Command = "claude"
 	}
 	if result.Args == nil {
 		result.Args = []string{"--dangerously-skip-permissions"}
+	}
+	if result.Session == nil {
+		result.Session = &RuntimeSessionConfig{}
+	}
+	if result.Session.SessionIDEnv == "" {
+		result.Session.SessionIDEnv = defaultSessionIDEnv(result.Provider)
+	}
+	if result.Session.ConfigDirEnv == "" {
+		result.Session.ConfigDirEnv = defaultConfigDirEnv(result.Provider)
+	}
+	if result.Session.ConfigDirFlag == "" {
+		result.Session.ConfigDirFlag = defaultConfigDirFlag(result.Provider)
 	}
 	return result
 }
@@ -1263,6 +1281,11 @@ func BuildStartupCommand(envVars map[string]string, rigPath, prompt string) stri
 	for k, v := range rc.Env {
 		resolvedEnv[k] = v
 	}
+	if rc.Session != nil && rc.Session.ConfigDirEnv != "" {
+		if val := os.Getenv(rc.Session.ConfigDirEnv); val != "" {
+			resolvedEnv[rc.Session.ConfigDirEnv] = val
+		}
+	}
 
 	// Build environment export prefix
 	var exports []string
@@ -1376,6 +1399,11 @@ func BuildStartupCommandWithAgentOverride(envVars map[string]string, rigPath, pr
 	// Merge agent-specific env vars (e.g., OPENCODE_PERMISSION for yolo mode)
 	for k, v := range rc.Env {
 		resolvedEnv[k] = v
+	}
+	if rc.Session != nil && rc.Session.ConfigDirEnv != "" {
+		if val := os.Getenv(rc.Session.ConfigDirEnv); val != "" {
+			resolvedEnv[rc.Session.ConfigDirEnv] = val
+		}
 	}
 
 	// Build environment export prefix

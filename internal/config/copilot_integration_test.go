@@ -35,6 +35,7 @@ func TestCopilotIntegration_ConfigFileCreation(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  workDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("EnsureCopilotTrustedFolder: %v", err)
 	}
@@ -83,6 +84,7 @@ func TestCopilotIntegration_TrustedFolderAddition(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  workDir1,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("First EnsureCopilotTrustedFolder: %v", err)
 	}
@@ -91,6 +93,7 @@ func TestCopilotIntegration_TrustedFolderAddition(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  workDir2,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("Second EnsureCopilotTrustedFolder: %v", err)
 	}
@@ -149,6 +152,7 @@ func TestCopilotIntegration_Idempotency(t *testing.T) {
 				TownRoot: townRoot,
 				RigPath:  rigPath,
 				WorkDir:  workDir,
+				ConfigDir: filepath.Join(xdgHome, ".copilot"),
 			}); err != nil {
 				t.Fatalf("First call: %v", err)
 			}
@@ -158,6 +162,7 @@ func TestCopilotIntegration_Idempotency(t *testing.T) {
 				TownRoot: townRoot,
 				RigPath:  rigPath,
 				WorkDir:  workDir,
+				ConfigDir: filepath.Join(xdgHome, ".copilot"),
 			}); err != nil {
 				t.Fatalf("Second call: %v", err)
 			}
@@ -256,6 +261,7 @@ func TestCopilotIntegration_MultipleAgentStartupPatterns(t *testing.T) {
 				TownRoot: townRoot,
 				RigPath:  rigPath,
 				WorkDir:  workDir,
+				ConfigDir: filepath.Join(xdgHome, ".copilot"),
 			}); err != nil {
 				t.Fatalf("EnsureCopilotTrustedFolder: %v", err)
 			}
@@ -306,6 +312,7 @@ func TestCopilotIntegration_PolecatSpecialCase(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  polecatWorktree1,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("First polecat call: %v", err)
 	}
@@ -316,6 +323,7 @@ func TestCopilotIntegration_PolecatSpecialCase(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  polecatWorktree2,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("Second polecat call: %v", err)
 	}
@@ -398,6 +406,7 @@ func TestCopilotIntegration_PolecatParentDirAddedOnce(t *testing.T) {
 			TownRoot: townRoot,
 			RigPath:  rigPath,
 			WorkDir:  worktree,
+			ConfigDir: filepath.Join(xdgHome, ".copilot"),
 		}); err != nil {
 			t.Fatalf("iteration %d: %v", i, err)
 		}
@@ -467,6 +476,7 @@ func TestCopilotIntegration_ConfigWithExistingData(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  workDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("EnsureCopilotTrustedFolder: %v", err)
 	}
@@ -530,6 +540,7 @@ func TestCopilotIntegration_SkipsNonCopilotAgents(t *testing.T) {
 				TownRoot: townRoot,
 				RigPath:  rigPath,
 				WorkDir:  workDir,
+				ConfigDir: filepath.Join(xdgHome, ".copilot"),
 			}); err != nil {
 				t.Fatalf("EnsureCopilotTrustedFolder: %v", err)
 			}
@@ -590,6 +601,7 @@ func TestCopilotIntegration_RoleAgentOverride(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  workDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("EnsureCopilotTrustedFolder: %v", err)
 	}
@@ -636,6 +648,7 @@ func TestCopilotIntegration_AgentOverridePathBased(t *testing.T) {
 		RigPath:       rigPath,
 		WorkDir:       workDir,
 		AgentOverride: "copilot",
+		ConfigDir:     filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("EnsureCopilotTrustedFolder: %v", err)
 	}
@@ -682,6 +695,7 @@ func TestCopilotIntegration_PathNormalization(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  workDir,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("First call: %v", err)
 	}
@@ -692,6 +706,7 @@ func TestCopilotIntegration_PathNormalization(t *testing.T) {
 		TownRoot: townRoot,
 		RigPath:  rigPath,
 		WorkDir:  workDirVariant,
+		ConfigDir: filepath.Join(xdgHome, ".copilot"),
 	}); err != nil {
 		t.Fatalf("Second call with variant: %v", err)
 	}

@@ -19,6 +19,13 @@ import (
 	"github.com/steveyegge/gastown/internal/tmux"
 )
 
+func configDirEnvFor(rc *config.RuntimeConfig) string {
+	if rc != nil && rc.Session != nil && rc.Session.ConfigDirEnv != "" {
+		return rc.Session.ConfigDirEnv
+	}
+	return "CLAUDE_CONFIG_DIR"
+}
+
 // debugSession logs non-fatal errors during session startup when GT_DEBUG_SESSION=1.
 func debugSession(context string, err error) {
 	if os.Getenv("GT_DEBUG_SESSION") != "" && err != nil {
@@ -60,6 +67,9 @@ type SessionStartOptions struct {
 
 	// Account specifies the account handle to use (overrides default).
 	Account string
+
+	// AgentOverride specifies an alternate agent alias (e.g., copilot).
+	AgentOverride string
 
 	// RuntimeConfigDir is resolved config directory for the runtime account.
 	// If set, this is injected as an environment variable.
@@ -213,6 +223,10 @@ func (m *SessionManager) Start(polecat string, opts SessionStartOptions) error {
 	// Use ResolveRoleAgentConfig to honor town's default_agent setting
 	townRoot := filepath.Dir(m.rig.Path)
 	runtimeConfig := config.ResolveRoleAgentConfig("polecat", townRoot, m.rig.Path)
+	sessionIDEnv := ""
+	if runtimeConfig != nil && runtimeConfig.Session != nil {
+		sessionIDEnv = runtimeConfig.Session.SessionIDEnv
+	}
 
 	// Ensure runtime settings exist in polecats/ (not polecats/<name>/) so we don't
 	// write into the source repo. Runtime walks up the tree to find settings.
@@ -231,6 +245,17 @@ func (m *SessionManager) Start(polecat string, opts SessionStartOptions) error {
 		command = config.PrependEnv(command, map[string]string{runtimeConfig.Session.ConfigDirEnv: opts.RuntimeConfigDir})
 	}
 
+	if err := config.EnsureCopilotTrustedFolder(config.CopilotTrustConfig{
+		Role:          "polecat",
+		TownRoot:      townRoot,
+		RigPath:       m.rig.Path,
+		WorkDir:       workDir,
+		AgentOverride: opts.AgentOverride,
+		ConfigDir:     opts.RuntimeConfigDir,
+	}); err != nil {
+		return err
+	}
+
 	// Create session with command directly to avoid send-keys race condition.
 	// See: https://github.com/anthropics/gastown/issues/280
 	if err := m.tmux.NewSessionWithCommand(sessionID, workDir, command); err != nil {
@@ -240,12 +265,14 @@ func (m *SessionManager) Start(polecat string, opts SessionStartOptions) error {
 	// Set environment (non-fatal: session works without these)
 	// Use centralized AgentEnv for consistency across all role startup paths
 	envVars := config.AgentEnv(config.AgentEnvConfig{
-		Role:             "polecat",
-		Rig:              m.rig.Name,
-		AgentName:        polecat,
-		TownRoot:         townRoot,
-		RuntimeConfigDir: opts.RuntimeConfigDir,
-		BeadsNoDaemon:    true,
+		Role:                "polecat",
+		Rig:                 m.rig.Name,
+		AgentName:           polecat,
+		TownRoot:            townRoot,
+		RuntimeConfigDir:    opts.RuntimeConfigDir,
+		RuntimeConfigDirEnv: configDirEnvFor(runtimeConfig),
+		SessionIDEnv:        sessionIDEnv,
+		BeadsNoDaemon:       true,
 	})
 	for k, v := range envVars {
 		debugSession("SetEnvironment "+k, m.tmux.SetEnvironment(sessionID, k, v))

@@ -15,6 +15,13 @@ import (
 	"github.com/steveyegge/gastown/internal/tmux"
 )
 
+func runtimeConfigDirEnv(rc *config.RuntimeConfig) string {
+	if rc != nil && rc.Session != nil && rc.Session.ConfigDirEnv != "" {
+		return rc.Session.ConfigDirEnv
+	}
+	return "CLAUDE_CONFIG_DIR"
+}
+
 // Common errors
 var (
 	ErrNotRunning     = errors.New("deacon not running")
@@ -95,6 +102,7 @@ func (m *Manager) Start(agentOverride string) error {
 		TownRoot:      m.townRoot,
 		WorkDir:       deaconDir,
 		AgentOverride: agentOverride,
+		ConfigDir:     os.Getenv(runtimeConfigDirEnv(rc)),
 	}); err != nil {
 		return err
 	}

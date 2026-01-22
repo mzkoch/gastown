@@ -22,6 +22,13 @@ import (
 	"github.com/steveyegge/gastown/internal/util"
 )
 
+func runtimeConfigDirEnv(rc *config.RuntimeConfig) string {
+	if rc != nil && rc.Session != nil && rc.Session.ConfigDirEnv != "" {
+		return rc.Session.ConfigDirEnv
+	}
+	return "CLAUDE_CONFIG_DIR"
+}
+
 // Common errors
 var (
 	ErrNotRunning     = errors.New("refinery not running")
@@ -156,6 +163,7 @@ func (m *Manager) Start(foreground bool, agentOverride string) error {
 		RigPath:       m.rig.Path,
 		WorkDir:       refineryRigDir,
 		AgentOverride: agentOverride,
+		ConfigDir:     os.Getenv(runtimeConfigDirEnv(runtimeConfig)),
 	}); err != nil {
 		return err
 	}

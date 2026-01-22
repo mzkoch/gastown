@@ -126,9 +126,10 @@ func TestAgentEnv_WithRuntimeConfigDir(t *testing.T) {
 		AgentName:        "Toast",
 		TownRoot:         "/town",
 		RuntimeConfigDir: "/home/user/.config/claude",
+		RuntimeConfigDirEnv: "COPILOT_CONFIG_HOME",
 	})
 
-	assertEnv(t, env, "CLAUDE_CONFIG_DIR", "/home/user/.config/claude")
+	assertEnv(t, env, "COPILOT_CONFIG_HOME", "/home/user/.config/claude")
 }
 
 func TestAgentEnv_WithoutRuntimeConfigDir(t *testing.T) {
@@ -141,6 +142,19 @@ func TestAgentEnv_WithoutRuntimeConfigDir(t *testing.T) {
 	})
 
 	assertNotSet(t, env, "CLAUDE_CONFIG_DIR")
+}
+
+func TestAgentEnv_RuntimeConfigDir_DefaultsToClaudeVar(t *testing.T) {
+	t.Parallel()
+	env := AgentEnv(AgentEnvConfig{
+		Role:             "polecat",
+		Rig:              "myrig",
+		AgentName:        "Toast",
+		TownRoot:         "/town",
+		RuntimeConfigDir: "/home/user/.config/claude",
+	})
+
+	assertEnv(t, env, "CLAUDE_CONFIG_DIR", "/home/user/.config/claude")
 }
 
 func TestAgentEnvSimple(t *testing.T) {

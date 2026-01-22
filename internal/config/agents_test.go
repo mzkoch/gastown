@@ -605,6 +605,12 @@ func TestCopilotAgentPreset(t *testing.T) {
 	if info.SessionIDEnv != "COPILOT_SESSION_ID" {
 		t.Errorf("copilot SessionIDEnv = %q, want COPILOT_SESSION_ID", info.SessionIDEnv)
 	}
+	if info.ConfigDirEnv != "COPILOT_CONFIG_HOME" {
+		t.Errorf("copilot ConfigDirEnv = %q, want COPILOT_CONFIG_HOME", info.ConfigDirEnv)
+	}
+	if info.ConfigDirFlag != "--config-dir" {
+		t.Errorf("copilot ConfigDirFlag = %q, want --config-dir", info.ConfigDirFlag)
+	}
 }
 
 func TestCopilotRuntimeTmuxDefaults(t *testing.T) {

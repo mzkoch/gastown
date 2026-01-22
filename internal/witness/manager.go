@@ -18,6 +18,13 @@ import (
 	"github.com/steveyegge/gastown/internal/workspace"
 )
 
+func runtimeConfigDirEnv(rc *config.RuntimeConfig) string {
+	if rc != nil && rc.Session != nil && rc.Session.ConfigDirEnv != "" {
+		return rc.Session.ConfigDirEnv
+	}
+	return "CLAUDE_CONFIG_DIR"
+}
+
 // Common errors
 var (
 	ErrNotRunning     = errors.New("witness not running")
@@ -148,6 +155,7 @@ func (m *Manager) Start(foreground bool, agentOverride string, envOverrides []st
 		RigPath:       m.rig.Path,
 		WorkDir:       witnessDir,
 		AgentOverride: agentOverride,
+		ConfigDir:     os.Getenv(runtimeConfigDirEnv(rc)),
 	}); err != nil {
 		return err
 	}

@@ -15,6 +15,7 @@ type CopilotTrustConfig struct {
 	RigPath       string
 	WorkDir       string
 	AgentOverride string
+	ConfigDir     string
 }
 
 // EnsureCopilotTrustedFolder ensures Copilot trusts the session's working directory.
@@ -42,7 +43,7 @@ func EnsureCopilotTrustedFolder(cfg CopilotTrustConfig) error {
 		}
 	}
 
-	if _, err := copilot.EnsureTrustedFolder(trustPath); err != nil {
+	if _, err := copilot.EnsureTrustedFolderAt(trustPath, cfg.ConfigDir); err != nil {
 		return fmt.Errorf("updating copilot trusted_folders: %w", err)
 	}
 	return nil

@@ -300,6 +300,10 @@ type RuntimeSessionConfig struct {
 	// ConfigDirEnv is the environment variable that selects a runtime account/config dir.
 	// Default: "CLAUDE_CONFIG_DIR" for claude, empty for codex/generic.
 	ConfigDirEnv string `json:"config_dir_env,omitempty"`
+
+	// ConfigDirFlag is the command-line flag for runtime config dir (e.g., "--config-dir").
+	// Default: "--config-dir" for copilot, empty for others.
+	ConfigDirFlag string `json:"config_dir_flag,omitempty"`
 }
 
 // RuntimeHooksConfig configures runtime hook installation.
@@ -343,7 +347,12 @@ func (rc *RuntimeConfig) BuildCommand() string {
 	resolved := normalizeRuntimeConfig(rc)
 
 	cmd := resolved.Command
-	args := resolved.Args
+	args := append([]string(nil), resolved.Args...)
+	if resolved.Session != nil && resolved.Session.ConfigDirFlag != "" {
+		if val := os.Getenv(resolved.Session.ConfigDirEnv); val != "" {
+			args = append(args, resolved.Session.ConfigDirFlag, val)
+		}
+	}
 
 	// Combine command and args
 	if len(args) > 0 {
@@ -377,6 +386,11 @@ func (rc *RuntimeConfig) BuildCommandWithPrompt(prompt string) string {
 func (rc *RuntimeConfig) BuildArgsWithPrompt(prompt string) []string {
 	resolved := normalizeRuntimeConfig(rc)
 	args := append([]string{resolved.Command}, resolved.Args...)
+	if resolved.Session != nil && resolved.Session.ConfigDirFlag != "" {
+		if val := os.Getenv(resolved.Session.ConfigDirEnv); val != "" {
+			args = append(args, resolved.Session.ConfigDirFlag, val)
+		}
+	}
 
 	p := prompt
 	if p == "" {
@@ -395,6 +409,11 @@ func (rc *RuntimeConfig) BuildArgsWithPrompt(prompt string) []string {
 func (rc *RuntimeConfig) BuildNonInteractiveArgsWithPrompt(prompt string) []string {
 	resolved := normalizeRuntimeConfig(rc)
 	args := append([]string{resolved.Command}, resolved.Args...)
+	if resolved.Session != nil && resolved.Session.ConfigDirFlag != "" {
+		if val := os.Getenv(resolved.Session.ConfigDirEnv); val != "" {
+			args = append(args, resolved.Session.ConfigDirFlag, val)
+		}
+	}
 
 	info := GetAgentPresetByName(resolved.Provider)
 	if info == nil {
@@ -464,6 +483,9 @@ func normalizeRuntimeConfig(rc *RuntimeConfig) *RuntimeConfig {
 
 	if rc.Session.ConfigDirEnv == "" {
 		rc.Session.ConfigDirEnv = defaultConfigDirEnv(rc.Provider)
+	}
+	if rc.Session.ConfigDirFlag == "" {
+		rc.Session.ConfigDirFlag = defaultConfigDirFlag(rc.Provider)
 	}
 
 	if rc.Hooks == nil {
@@ -581,6 +603,16 @@ func defaultSessionIDEnv(provider string) string {
 func defaultConfigDirEnv(provider string) string {
 	if provider == "claude" {
 		return "CLAUDE_CONFIG_DIR"
+	}
+	if provider == "copilot" {
+		return "COPILOT_CONFIG_HOME"
+	}
+	return ""
+}
+
+func defaultConfigDirFlag(provider string) string {
+	if provider == "copilot" {
+		return "--config-dir"
 	}
 	return ""
 }

@@ -59,6 +59,12 @@ type AgentPresetInfo struct {
 	// Used for resuming sessions across restarts.
 	SessionIDEnv string `json:"session_id_env,omitempty"`
 
+	// ConfigDirEnv is the environment variable for runtime config dir.
+	ConfigDirEnv string `json:"config_dir_env,omitempty"`
+
+	// ConfigDirFlag is the CLI flag for runtime config dir.
+	ConfigDirFlag string `json:"config_dir_flag,omitempty"`
+
 	// ResumeFlag is the flag/subcommand for resuming sessions.
 	// For claude/gemini: "--resume"
 	// For codex: "resume" (subcommand)
@@ -197,9 +203,11 @@ var builtinPresets = map[AgentPreset]*AgentPresetInfo{
 		Args:                []string{"--yolo"},
 		ProcessNames:        []string{"copilot"},
 		SessionIDEnv:        "COPILOT_SESSION_ID",
+		ConfigDirEnv:        "COPILOT_CONFIG_HOME",
+		ConfigDirFlag:       "--config-dir",
 		ResumeFlag:          "--resume",
 		ResumeStyle:         "flag",
-		SupportsHooks:       false, // Copilot uses AGENTS.md instead of hooks
+		SupportsHooks:       true, // Copilot CLI supports hooks per docs
 		SupportsForkSession: false,
 		PromptMode:          "none", // Copilot rejects positional prompt args
 		NonInteractive: &NonInteractiveConfig{
@@ -390,6 +398,11 @@ func RuntimeConfigFromPreset(preset AgentPreset) *RuntimeConfig {
 		Args:       append([]string(nil), info.Args...), // Copy to avoid mutation
 		Env:        envCopy,
 		PromptMode: info.PromptMode,
+		Session: &RuntimeSessionConfig{
+			SessionIDEnv:  info.SessionIDEnv,
+			ConfigDirEnv:  info.ConfigDirEnv,
+			ConfigDirFlag: info.ConfigDirFlag,
+		},
 	}
 
 	// Resolve command path for claude preset (handles alias installations)
