@@ -128,6 +128,45 @@ func (m *SessionManager) clonePath(polecat string) string {
 	return newPath
 }
 
+func defaultAgentOverride(command string) string {
+	if command == "" {
+		return ""
+	}
+	trimmed := strings.TrimSpace(command)
+	for strings.HasPrefix(trimmed, "export ") {
+		idx := strings.Index(trimmed, "&&")
+		if idx == -1 {
+			break
+		}
+		trimmed = strings.TrimSpace(trimmed[idx+2:])
+	}
+	fields := strings.Fields(trimmed)
+	if len(fields) == 0 {
+		return ""
+	}
+	if fields[0] == "exec" {
+		fields = fields[1:]
+	}
+	if len(fields) > 0 && fields[0] == "env" {
+		fields = fields[1:]
+		for len(fields) > 0 {
+			if fields[0] == "--" {
+				fields = fields[1:]
+				break
+			}
+			if strings.HasPrefix(fields[0], "-") || strings.Contains(fields[0], "=") {
+				fields = fields[1:]
+				continue
+			}
+			break
+		}
+	}
+	if len(fields) == 0 {
+		return ""
+	}
+	return filepath.Base(fields[0])
+}
+
 // hasPolecat checks if the polecat exists in this rig.
 func (m *SessionManager) hasPolecat(polecat string) bool {
 	polecatPath := m.polecatDir(polecat)
