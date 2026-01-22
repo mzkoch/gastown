@@ -268,7 +268,11 @@ func runSessionStart(cmd *cobra.Command, args []string) error {
 		Issue: sessionIssue,
 	}
 	if sessionAgentOverride != "" {
-		opts.AgentOverride = sessionAgentOverride
+		command, err := config.BuildPolecatStartupCommandWithAgentOverride(rigName, polecatName, r.Path, "", sessionAgentOverride)
+		if err != nil {
+			return fmt.Errorf("building startup command: %w", err)
+		}
+		opts.Command = command
 	}
 
 	fmt.Printf("Starting session for %s/%s...\n", rigName, polecatName)
@@ -501,7 +505,7 @@ func runSessionRestart(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	polecatMgr, _, err := getSessionManager(rigName)
+	polecatMgr, r, err := getSessionManager(rigName)
 	if err != nil {
 		return err
 	}
@@ -528,7 +532,11 @@ func runSessionRestart(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Starting session for %s/%s...\n", rigName, polecatName)
 	opts := polecat.SessionStartOptions{}
 	if sessionAgentOverride != "" {
-		opts.AgentOverride = sessionAgentOverride
+		command, err := config.BuildPolecatStartupCommandWithAgentOverride(rigName, polecatName, r.Path, "", sessionAgentOverride)
+		if err != nil {
+			return fmt.Errorf("building startup command: %w", err)
+		}
+		opts.Command = command
 	}
 	if err := polecatMgr.Start(polecatName, opts); err != nil {
 		return fmt.Errorf("starting session: %w", err)
