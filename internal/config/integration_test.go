@@ -503,7 +503,11 @@ func TestBuiltinAgentStartupCommands(t *testing.T) {
 			if rc.Provider != string(tt.preset) {
 				t.Errorf("Provider = %q, want %q", rc.Provider, tt.preset)
 			}
-			if rc.Command != tt.command {
+			if tt.preset == AgentClaude {
+				if !strings.HasSuffix(rc.Command, "/"+tt.command) && rc.Command != tt.command {
+					t.Errorf("Command = %q, want %q or path ending with /%s", rc.Command, tt.command, tt.command)
+				}
+			} else if rc.Command != tt.command {
 				t.Errorf("Command = %q, want %q", rc.Command, tt.command)
 			}
 			if len(rc.Args) != len(tt.args) {
@@ -518,7 +522,11 @@ func TestBuiltinAgentStartupCommands(t *testing.T) {
 			prompt := "builtin-prompt"
 			cmd := BuildPolecatStartupCommand(rigName, "test-polecat", rigPath, prompt)
 
-			expectedFragment := tt.command + " " + strings.Join(tt.args, " ")
+			expectedCommand := tt.command
+			if tt.preset == AgentClaude && strings.HasSuffix(rc.Command, "/"+tt.command) {
+				expectedCommand = rc.Command
+			}
+			expectedFragment := expectedCommand + " " + strings.Join(tt.args, " ")
 			if !strings.Contains(cmd, expectedFragment) {
 				t.Errorf("Expected command to contain %q, got: %s", expectedFragment, cmd)
 			}

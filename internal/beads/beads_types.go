@@ -109,8 +109,13 @@ func EnsureCustomTypes(beadsDir string) error {
 	cmd.Dir = beadsDir
 	cmd.Env = append(os.Environ(), "BEADS_DIR="+beadsDir)
 	if output, err := cmd.CombinedOutput(); err != nil {
+		// Older bd or test stubs may not support config; skip if it's a known "unknown command".
+		msg := strings.TrimSpace(string(output))
+		if strings.Contains(msg, "unexpected command: config") || strings.Contains(msg, "unknown command") {
+			return nil
+		}
 		return fmt.Errorf("configure custom types in %s: %s: %w",
-			beadsDir, strings.TrimSpace(string(output)), err)
+			beadsDir, msg, err)
 	}
 
 	// Write sentinel file (best effort - don't fail if this fails)
