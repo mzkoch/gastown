@@ -229,7 +229,9 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 		if runtimeConfig.Session != nil && runtimeConfig.Session.ConfigDirEnv != "" && claudeConfigDir != "" {
 			configDirEnv := runtimeConfig.Session.ConfigDirEnv
 			_ = os.Setenv(configDirEnv, claudeConfigDir)
-			defer os.Unsetenv(configDirEnv)
+			defer func() {
+				_ = os.Unsetenv(configDirEnv)
+			}()
 			startupCmd = config.PrependEnv(startupCmd, map[string]string{configDirEnv: claudeConfigDir})
 		}
 		// Note: Don't call KillPaneProcesses here - this is a NEW session with just
@@ -289,7 +291,9 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 			if runtimeConfig.Session != nil && runtimeConfig.Session.ConfigDirEnv != "" && claudeConfigDir != "" {
 				configDirEnv := runtimeConfig.Session.ConfigDirEnv
 				_ = os.Setenv(configDirEnv, claudeConfigDir)
-				defer os.Unsetenv(configDirEnv)
+				defer func() {
+					_ = os.Unsetenv(configDirEnv)
+				}()
 				startupCmd = config.PrependEnv(startupCmd, map[string]string{configDirEnv: claudeConfigDir})
 			}
 			// Kill all processes in the pane before respawning to prevent orphan leaks
