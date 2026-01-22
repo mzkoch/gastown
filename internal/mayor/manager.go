@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/steveyegge/gastown/internal/claude"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 	"github.com/steveyegge/gastown/internal/session"
+	"github.com/steveyegge/gastown/internal/runtime"
 	"github.com/steveyegge/gastown/internal/tmux"
 )
 
@@ -73,9 +73,10 @@ func (m *Manager) Start(agentOverride string) error {
 		return fmt.Errorf("creating mayor directory: %w", err)
 	}
 
-	// Ensure Claude settings exist
-	if err := claude.EnsureSettingsForRole(mayorDir, "mayor"); err != nil {
-		return fmt.Errorf("ensuring Claude settings: %w", err)
+	// Ensure runtime settings exist
+	rc := config.ResolveRoleAgentConfig("mayor", m.townRoot, "")
+	if err := runtime.EnsureSettingsForRole(mayorDir, "mayor", rc); err != nil {
+		return fmt.Errorf("ensuring runtime settings: %w", err)
 	}
 
 	// Build startup beacon with explicit instructions (matches gt handoff behavior)
@@ -111,9 +112,14 @@ func (m *Manager) Start(agentOverride string) error {
 
 	// Set environment variables (non-fatal: session works without these)
 	// Use centralized AgentEnv for consistency across all role startup paths
+	sessionIDEnv := ""
+	if rc != nil && rc.Session != nil {
+		sessionIDEnv = rc.Session.SessionIDEnv
+	}
 	envVars := config.AgentEnv(config.AgentEnvConfig{
-		Role:     "mayor",
-		TownRoot: m.townRoot,
+		Role:         "mayor",
+		TownRoot:     m.townRoot,
+		SessionIDEnv: sessionIDEnv,
 	})
 	for k, v := range envVars {
 		_ = t.SetEnvironment(sessionID, k, v)

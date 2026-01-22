@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/steveyegge/gastown/internal/claude"
+	"github.com/steveyegge/gastown/internal/copilot"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/opencode"
 	"github.com/steveyegge/gastown/internal/tmux"
@@ -28,6 +29,8 @@ func EnsureSettingsForRole(workDir, role string, rc *config.RuntimeConfig) error
 		return claude.EnsureSettingsForRoleAt(workDir, role, rc.Hooks.Dir, rc.Hooks.SettingsFile)
 	case "opencode":
 		return opencode.EnsurePluginAt(workDir, rc.Hooks.Dir, rc.Hooks.SettingsFile)
+	case "copilot":
+		return copilot.EnsureHooksForRole(workDir, role, rc.Hooks.Dir, rc.Hooks.SettingsFile)
 	default:
 		return nil
 	}
@@ -149,6 +152,14 @@ func hooksAvailable(rc *config.RuntimeConfig) bool {
 	if filepath.IsAbs(hooksPath) {
 		_, err := os.Stat(hooksPath)
 		return err == nil
+	}
+	if isCopilotRuntime(rc) {
+		if cwd, err := os.Getwd(); err == nil {
+			if _, err := os.Stat(filepath.Join(cwd, hooksPath)); err == nil {
+				return true
+			}
+		}
+		return false
 	}
 	if home := os.Getenv("HOME"); home != "" {
 		if _, err := os.Stat(filepath.Join(home, hooksPath)); err == nil {

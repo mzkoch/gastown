@@ -8,7 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/steveyegge/gastown/internal/claude"
+	"github.com/steveyegge/gastown/internal/config"
+	"github.com/steveyegge/gastown/internal/runtime"
 	"github.com/steveyegge/gastown/internal/session"
 	"github.com/steveyegge/gastown/internal/style"
 	"github.com/steveyegge/gastown/internal/templates"
@@ -445,6 +446,12 @@ func (c *ClaudeSettingsCheck) Fix(ctx *CheckContext) error {
 	t := tmux.NewTmux()
 
 	for _, sf := range c.staleSettings {
+		rigPath := ""
+		if sf.rigName != "" {
+			rigPath = filepath.Join(ctx.TownRoot, sf.rigName)
+		}
+		runtimeConfig := config.ResolveRoleAgentConfig(sf.agentType, ctx.TownRoot, rigPath)
+
 		// Skip files with local modifications - require manual review
 		if sf.wrongLocation && sf.gitStatus == gitStatusTrackedModified {
 			skipped = append(skipped, fmt.Sprintf("%s: has local modifications, skipping", sf.path))
@@ -468,7 +475,7 @@ func (c *ClaudeSettingsCheck) Fix(ctx *CheckContext) error {
 			// For mayor settings.json at town root, create at mayor/.claude/
 			if sf.agentType == "mayor" && strings.HasSuffix(claudeDir, ".claude") && !strings.Contains(sf.path, "/mayor/") {
 				if err := os.MkdirAll(mayorDir, 0755); err == nil {
-					_ = claude.EnsureSettingsForRole(mayorDir, "mayor")
+					_ = runtime.EnsureSettingsForRole(mayorDir, "mayor", runtimeConfig)
 				}
 			}
 
@@ -497,7 +504,7 @@ func (c *ClaudeSettingsCheck) Fix(ctx *CheckContext) error {
 
 		// Recreate settings using EnsureSettingsForRole
 		workDir := filepath.Dir(claudeDir) // agent work directory
-		if err := claude.EnsureSettingsForRole(workDir, sf.agentType); err != nil {
+		if err := runtime.EnsureSettingsForRole(workDir, sf.agentType, runtimeConfig); err != nil {
 			errors = append(errors, fmt.Sprintf("failed to recreate settings for %s: %v", sf.path, err))
 			continue
 		}

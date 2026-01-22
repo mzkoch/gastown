@@ -182,7 +182,7 @@ func TestStartupFallbackCommands_CopilotWithoutHooks(t *testing.T) {
 		Provider: "copilot",
 		Hooks: &config.RuntimeHooksConfig{
 			Provider:     "copilot",
-			Dir:          ".copilot",
+			Dir:          ".",
 			SettingsFile: "missing.json",
 		},
 	}

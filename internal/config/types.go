@@ -605,7 +605,7 @@ func defaultHooksDir(provider string) string {
 	case "opencode":
 		return ".opencode/plugin"
 	case "copilot":
-		return ".copilot"
+		return "."
 	default:
 		return ""
 	}

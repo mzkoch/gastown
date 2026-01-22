@@ -258,12 +258,17 @@ func (m *SessionManager) Start(polecat string, opts SessionStartOptions) error {
 
 	// Set environment (non-fatal: session works without these)
 	// Use centralized AgentEnv for consistency across all role startup paths
+	sessionIDEnv := ""
+	if runtimeConfig != nil && runtimeConfig.Session != nil {
+		sessionIDEnv = runtimeConfig.Session.SessionIDEnv
+	}
 	envVars := config.AgentEnv(config.AgentEnvConfig{
 		Role:             "polecat",
 		Rig:              m.rig.Name,
 		AgentName:        polecat,
 		TownRoot:         townRoot,
 		RuntimeConfigDir: opts.RuntimeConfigDir,
+		SessionIDEnv:     sessionIDEnv,
 		BeadsNoDaemon:    true,
 	})
 	for k, v := range envVars {

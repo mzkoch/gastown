@@ -130,18 +130,24 @@ func SpawnPolecatForSling(rigName string, opts SlingSpawnOptions) (*SpawnedPolec
 
 	// Check if already running
 	running, _ := polecatSessMgr.IsRunning(polecatName)
-		if !running {
-			fmt.Printf("Starting session for %s/%s...\n", rigName, polecatName)
-			startOpts := polecat.SessionStartOptions{
-				RuntimeConfigDir: claudeConfigDir,
-				AgentOverride:    opts.Agent,
-			}
+	if !running {
+		fmt.Printf("Starting session for %s/%s...\n", rigName, polecatName)
+		runtimeConfig := config.ResolveRoleAgentConfig("polecat", townRoot, r.Path)
+		startOpts := polecat.SessionStartOptions{
+			RuntimeConfigDir: claudeConfigDir,
+			AgentOverride:    opts.Agent,
+		}
 		if opts.Agent != "" {
 			cmd, err := config.BuildPolecatStartupCommandWithAgentOverride(rigName, polecatName, r.Path, "", opts.Agent)
 			if err != nil {
 				return nil, err
 			}
 			startOpts.Command = cmd
+		}
+		if runtimeConfig.Session != nil && runtimeConfig.Session.ConfigDirEnv != "" && claudeConfigDir != "" {
+			startOpts.RuntimeConfigDir = claudeConfigDir
+		} else {
+			startOpts.RuntimeConfigDir = ""
 		}
 		if err := polecatSessMgr.Start(polecatName, startOpts); err != nil {
 			return nil, fmt.Errorf("starting session: %w", err)

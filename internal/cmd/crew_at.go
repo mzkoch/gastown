@@ -164,12 +164,17 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 
 		// Set environment (non-fatal: session works without these)
 		// Use centralized AgentEnv for consistency across all role startup paths
+		sessionIDEnv := ""
+		if runtimeConfig != nil && runtimeConfig.Session != nil {
+			sessionIDEnv = runtimeConfig.Session.SessionIDEnv
+		}
 		envVars := config.AgentEnv(config.AgentEnvConfig{
 			Role:             "crew",
 			Rig:              r.Name,
 			AgentName:        name,
 			TownRoot:         townRoot,
 			RuntimeConfigDir: claudeConfigDir,
+			SessionIDEnv:     sessionIDEnv,
 			BeadsNoDaemon:    true,
 		})
 		for k, v := range envVars {

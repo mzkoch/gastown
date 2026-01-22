@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/steveyegge/gastown/internal/beads"
-	"github.com/steveyegge/gastown/internal/claude"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/constants"
 	"github.com/steveyegge/gastown/internal/rig"
@@ -117,20 +116,19 @@ func (m *Manager) Start(foreground bool, agentOverride string, envOverrides []st
 	// Working directory
 	witnessDir := m.witnessDir()
 
-	// Ensure Claude settings exist in witness/ (not witness/rig/) so we don't
-	// write into the source repo. Claude walks up the tree to find settings.
+	// Ensure runtime settings exist in witness/ (not witness/rig/) so we don't
+	// write into the source repo. Runtime walks up the tree to find settings.
 	witnessParentDir := filepath.Join(m.rig.Path, "witness")
-	if err := claude.EnsureSettingsForRole(witnessParentDir, "witness"); err != nil {
-		return fmt.Errorf("ensuring Claude settings: %w", err)
+	townRoot := m.townRoot()
+	rc := config.ResolveRoleAgentConfig("witness", townRoot, m.rig.Path)
+	if err := runtime.EnsureSettingsForRole(witnessParentDir, "witness", rc); err != nil {
+		return fmt.Errorf("ensuring runtime settings: %w", err)
 	}
 
 	roleConfig, err := m.roleConfig()
 	if err != nil {
 		return err
 	}
-
-	townRoot := m.townRoot()
-	rc := config.ResolveRoleAgentConfig("witness", townRoot, m.rig.Path)
 
 	// Build startup command first
 	// NOTE: No gt prime injection needed - SessionStart hook handles it automatically
@@ -162,10 +160,15 @@ func (m *Manager) Start(foreground bool, agentOverride string, envOverrides []st
 
 	// Set environment variables (non-fatal: session works without these)
 	// Use centralized AgentEnv for consistency across all role startup paths
+	sessionIDEnv := ""
+	if rc != nil && rc.Session != nil {
+		sessionIDEnv = rc.Session.SessionIDEnv
+	}
 	envVars := config.AgentEnv(config.AgentEnvConfig{
-		Role:     "witness",
-		Rig:      m.rig.Name,
-		TownRoot: townRoot,
+		Role:         "witness",
+		Rig:          m.rig.Name,
+		TownRoot:     townRoot,
+		SessionIDEnv: sessionIDEnv,
 	})
 	for k, v := range envVars {
 		_ = t.SetEnvironment(sessionID, k, v)

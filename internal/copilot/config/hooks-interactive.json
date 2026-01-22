@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "export PATH=\"$HOME/go/bin:$HOME/bin:$PATH\" && gt prime --hook && gt nudge deacon session-started"
+      }
+    ],
+    "preCompact": [
+      {
+        "type": "command",
+        "bash": "export PATH=\"$HOME/go/bin:$HOME/bin:$PATH\" && gt prime --hook"
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "export PATH=\"$HOME/go/bin:$HOME/bin:$PATH\" && gt mail check --inject"
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "export PATH=\"$HOME/go/bin:$HOME/.local/bin:$PATH\" && gt tap guard pr-workflow"
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "export PATH=\"$HOME/go/bin:$HOME/bin:$PATH\" && gt costs record"
+      }
+    ]
+  }
+}
