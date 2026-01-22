@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"runtime"
 	"os"
 	"path/filepath"
 	"testing"
@@ -163,6 +164,9 @@ func TestFindSessionLocation(t *testing.T) {
 }
 
 func TestSymlinkSessionToCurrentAccount(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink tests require admin privileges on Windows")
+	}
 	t.Run("creates symlink for session in other account", func(t *testing.T) {
 		townRoot, fakeHome, cleanup := setupSeanceTestEnv(t)
 		defer cleanup()
@@ -264,6 +268,9 @@ func TestSymlinkSessionToCurrentAccount(t *testing.T) {
 }
 
 func TestCleanupOrphanedSessionSymlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink tests require admin privileges on Windows")
+	}
 	t.Run("removes orphaned symlinks", func(t *testing.T) {
 		_, fakeHome, cleanup := setupSeanceTestEnv(t)
 		defer cleanup()

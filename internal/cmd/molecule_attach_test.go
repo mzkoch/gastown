@@ -23,7 +23,6 @@ func TestRunMoleculeAttachAllowsHookedBead(t *testing.T) {
 
 	logPath := filepath.Join(tmpDir, "bd.log")
 	descPath := filepath.Join(tmpDir, "bd.desc")
-	bdPath := filepath.Join(binDir, "bd")
 	bdScript := `#!/bin/sh
 set -e
 if [ -n "$BD_LOG" ]; then
@@ -67,9 +66,39 @@ case "$cmd" in
 esac
 exit 0
 `
-	if err := os.WriteFile(bdPath, []byte(bdScript), 0755); err != nil {
-		t.Fatalf("write bd stub: %v", err)
-	}
+	bdScriptWindows := `@echo off
+setlocal enableextensions
+if not "%BD_LOG%"=="" echo %*>>"%BD_LOG%"
+set "cmd=%1"
+if "%cmd%"=="--no-daemon" set "cmd=%2"
+if "%cmd%"=="show" (
+  set "issue_id=%2"
+  if "%BEAD_STATUS%"=="" (
+    echo [{"id":"%issue_id%","status":"hooked","description":""}]
+  ) else (
+    echo [{"id":"%issue_id%","status":"%BEAD_STATUS%","description":""}]
+  )
+  exit /b 0
+)
+if "%cmd%"=="update" (
+  for %%A in (%*) do (
+    set "arg=%%~A"
+    call :writeDesc
+  )
+  exit /b 0
+)
+exit /b 0
+:writeDesc
+setlocal enableextensions
+set "val=%arg%"
+if /i not "%val:~0,14%"=="--description=" exit /b 0
+set "desc=%val:~14%"
+if not "%BD_DESC%"=="" (
+  >"%BD_DESC%" <nul set /p =%desc%
+)
+exit /b 0
+`
+	_ = writeBDStub(t, binDir, bdScript, bdScriptWindows)
 
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("BEADS_DIR", beadsDir)

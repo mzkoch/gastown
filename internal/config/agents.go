@@ -398,7 +398,7 @@ func RuntimeConfigFromPreset(preset AgentPreset) *RuntimeConfig {
 		rc.Command = resolveClaudePath()
 	}
 
-	return rc
+	return normalizeRuntimeConfig(rc)
 }
 
 // BuildResumeCommand builds a command to resume an agent session.
