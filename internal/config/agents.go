@@ -31,8 +31,6 @@ const (
 	AgentCopilot AgentPreset = "copilot"
 	// AgentOpenCode is OpenCode multi-model CLI.
 	AgentOpenCode AgentPreset = "opencode"
-	// AgentCopilot is GitHub Copilot CLI.
-	AgentCopilot AgentPreset = "copilot"
 )
 
 // AgentPresetInfo contains the configuration details for an agent preset.
