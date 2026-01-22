@@ -228,7 +228,7 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 		// Prepend config dir env if available
 		if runtimeConfig.Session != nil && runtimeConfig.Session.ConfigDirEnv != "" && claudeConfigDir != "" {
 			configDirEnv := runtimeConfig.Session.ConfigDirEnv
-			os.Setenv(configDirEnv, claudeConfigDir)
+			_ = os.Setenv(configDirEnv, claudeConfigDir)
 			defer os.Unsetenv(configDirEnv)
 			startupCmd = config.PrependEnv(startupCmd, map[string]string{configDirEnv: claudeConfigDir})
 		}
@@ -288,7 +288,7 @@ func runCrewAt(cmd *cobra.Command, args []string) error {
 			// Prepend config dir env if available
 			if runtimeConfig.Session != nil && runtimeConfig.Session.ConfigDirEnv != "" && claudeConfigDir != "" {
 				configDirEnv := runtimeConfig.Session.ConfigDirEnv
-				os.Setenv(configDirEnv, claudeConfigDir)
+				_ = os.Setenv(configDirEnv, claudeConfigDir)
 				defer os.Unsetenv(configDirEnv)
 				startupCmd = config.PrependEnv(startupCmd, map[string]string{configDirEnv: claudeConfigDir})
 			}

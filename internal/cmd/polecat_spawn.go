@@ -150,7 +150,7 @@ func SpawnPolecatForSling(rigName string, opts SlingSpawnOptions) (*SpawnedPolec
 			startOpts.RuntimeConfigDir = ""
 		}
 		if runtimeConfig.Session != nil && runtimeConfig.Session.ConfigDirEnv != "" {
-			os.Setenv(runtimeConfig.Session.ConfigDirEnv, claudeConfigDir)
+			_ = os.Setenv(runtimeConfig.Session.ConfigDirEnv, claudeConfigDir)
 			defer os.Unsetenv(runtimeConfig.Session.ConfigDirEnv)
 		}
 		if err := polecatSessMgr.Start(polecatName, startOpts); err != nil {
