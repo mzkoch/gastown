@@ -97,6 +97,7 @@ func (m *Manager) Start(agentOverride string) error {
 		return fmt.Errorf("building startup command: %w", err)
 	}
 
+	rc := config.ResolveRoleAgentConfig("deacon", m.townRoot, "")
 	if err := config.EnsureCopilotTrustedFolder(config.CopilotTrustConfig{
 		Role:          "deacon",
 		TownRoot:      m.townRoot,
@@ -146,7 +147,6 @@ func (m *Manager) Start(agentOverride string) error {
 		Topic:     "patrol",
 	}) // Non-fatal
 
-	rc := config.ResolveRoleAgentConfig("deacon", m.townRoot, "")
 	runtime.WaitForCopilotReady(t, sessionID, rc, 30*time.Second)
 	runtime.SleepForReadyDelay(rc)
 	_ = runtime.RunStartupFallback(t, sessionID, "deacon", rc)

@@ -192,6 +192,11 @@ func (b *Boot) spawnTmux(agentOverride string) error {
 		startCmd = config.BuildAgentStartupCommand("boot", "", b.townRoot, "", beacon)
 	}
 
+	rc, _, err := config.ResolveAgentConfigWithOverride(b.townRoot, "", agentOverride)
+	if err != nil {
+		return err
+	}
+
 	if err := config.EnsureCopilotTrustedFolder(config.CopilotTrustConfig{
 		Role:          "boot",
 		TownRoot:      b.townRoot,
